@@ -2,7 +2,7 @@ var express = require("express");
 var router = express.Router();
 let { CheckLogin } = require('../utils/authHandler')
 let cartSchema = require('../schemas/carts')
-let inventorySchema = require('../schemas/inventories')
+let variantSchema = require('../schemas/productVariants')
 
 router.get('/', CheckLogin, async function (req, res, next) {
     let user = req.user;
@@ -18,16 +18,18 @@ router.post('/add', CheckLogin, async function (req, res, next) {
     let cart = await cartSchema.findOne({
         user: user._id
     })
-    let product = await inventorySchema.findOne({
-        product: productId
+    // Tìm variant thay vì inventory
+    let variant = await variantSchema.findOne({
+        _id: productId,
+        isDeleted: false
     })
-    if (!product) {
+    if (!variant) {
         res.status(404).send({
             message: "san pham khong ton tai"
         });
         return;
     }
-    let stock = product.stock;
+    let stock = variant.stock - variant.reserved;
     let index = cart.products.findIndex(
         function (e) {
             return e.product == productId
@@ -61,10 +63,11 @@ router.post('/remove', CheckLogin, async function (req, res, next) {
     let cart = await cartSchema.findOne({
         user: user._id
     })
-    let product = await inventorySchema.findOne({
-        product: productId
+    let variant = await variantSchema.findOne({
+        _id: productId,
+        isDeleted: false
     })
-    if (!product) {
+    if (!variant) {
         res.status(404).send({
             message: "san pham khong ton tai"
         });
@@ -91,10 +94,11 @@ router.post('/decrease', CheckLogin, async function (req, res, next) {
     let cart = await cartSchema.findOne({
         user: user._id
     })
-    let product = await inventorySchema.findOne({
-        product: productId
+    let variant = await variantSchema.findOne({
+        _id: productId,
+        isDeleted: false
     })
-    if (!product) {
+    if (!variant) {
         res.status(404).send({
             message: "san pham khong ton tai"
         });
@@ -128,16 +132,17 @@ router.post('/modify', CheckLogin, async function (req, res, next) {
     let cart = await cartSchema.findOne({
         user: user._id
     })
-    let product = await inventorySchema.findOne({
-        product: productId
+    let variant = await variantSchema.findOne({
+        _id: productId,
+        isDeleted: false
     })
-    if (!product) {
+    if (!variant) {
         res.status(404).send({
             message: "san pham khong ton tai"
         });
         return;
     }
-    let stock = product.stock;
+    let stock = variant.stock - variant.reserved;
     let index = cart.products.findIndex(
         function (e) {
             return e.product == productId
