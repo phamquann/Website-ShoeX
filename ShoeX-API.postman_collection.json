@@ -1,0 +1,658 @@
+{
+  "info": {
+    "_postman_id": "shoex-be-collection-2026",
+    "name": "ShoeX API Collection",
+    "description": "Full API collection for ShoeX Backend - http://localhost:3000\n\n**Hướng dẫn nhanh:**\n1. Import file này vào Postman\n2. Tạo Environment với biến `base_url = http://localhost:3000` và `token = <access_token_sau_khi_login>`\n3. Gọi Login trước để lấy accessToken, rồi copy vào biến `token`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "<paste_access_token_here>",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "<paste_refresh_token_here>",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"123456\",\n  \"fullName\": \"Test User\",\n  \"phone\": \"0912345678\"\n}"
+            },
+            "description": "Đăng ký tài khoản mới. Tự động gán role CUSTOMER."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "  console.log('✅ Token saved!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123456\"\n}"
+            },
+            "description": "Đăng nhập. Script test tự động lưu accessToken và refreshToken vào biến collection."
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api","v1","auth","me"] },
+            "description": "Lấy thông tin profile của user đang đăng nhập."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api","v1","auth","me"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"phone\": \"0987654321\",\n  \"email\": \"newemail@example.com\",\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/auth/change-password", "host": ["{{base_url}}"], "path": ["api","v1","auth","change-password"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"123456\",\n  \"newPassword\": \"newpass123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/refresh-token", "host": ["{{base_url}}"], "path": ["api","v1","auth","refresh-token"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api","v1","auth","forgot-password"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/reset-password/:token", "host": ["{{base_url}}"], "path": ["api","v1","auth","reset-password",":token"], "variable": [{ "key": "token", "value": "<reset_token_from_email>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"newpassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api","v1","auth","logout"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Users (Admin)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users?page=1&limit=10&search=",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" }
+              ]
+            },
+            "description": "Lấy danh sách tất cả users. Yêu cầu role ADMIN hoặc STAFF."
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/:id", "host": ["{{base_url}}"], "path": ["api","v1","users",":id"], "variable": [{ "key": "id", "value": "<user_id>" }] },
+            "description": "Yêu cầu role ADMIN."
+          }
+        },
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/users", "host": ["{{base_url}}"], "path": ["api","v1","users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newstaff\",\n  \"email\": \"staff@example.com\",\n  \"password\": \"123456\",\n  \"fullName\": \"Nhan Vien Moi\",\n  \"phone\": \"0911111111\",\n  \"role\": \"<role_id>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/users/:id", "host": ["{{base_url}}"], "path": ["api","v1","users",":id"], "variable": [{ "key": "id", "value": "<user_id>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ten Moi\",\n  \"phone\": \"0999999999\",\n  \"role\": \"<role_id>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle User Status (Lock/Unlock)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/:id/toggle-status", "host": ["{{base_url}}"], "path": ["api","v1","users",":id","toggle-status"], "variable": [{ "key": "id", "value": "<user_id>" }] },
+            "description": "Khóa/mở khóa tài khoản user."
+          }
+        },
+        {
+          "name": "Delete User (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/:id", "host": ["{{base_url}}"], "path": ["api","v1","users",":id"], "variable": [{ "key": "id", "value": "<user_id>" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📍 User Addresses",
+      "item": [
+        {
+          "name": "Get My Addresses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/user-addresses", "host": ["{{base_url}}"], "path": ["api","v1","user-addresses"] }
+          }
+        },
+        {
+          "name": "Create Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/user-addresses", "host": ["{{base_url}}"], "path": ["api","v1","user-addresses"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"phone\": \"0912345678\",\n  \"address\": \"123 Nguyen Hue\",\n  \"city\": \"Ho Chi Minh\",\n  \"district\": \"Quan 1\",\n  \"ward\": \"Phuong Ben Nghe\",\n  \"isDefault\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/user-addresses/:id", "host": ["{{base_url}}"], "path": ["api","v1","user-addresses",":id"], "variable": [{ "key": "id", "value": "<address_id>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van B\",\n  \"phone\": \"0987654321\",\n  \"address\": \"456 Le Loi\",\n  \"city\": \"Ho Chi Minh\",\n  \"district\": \"Quan 3\",\n  \"ward\": \"Phuong 10\",\n  \"isDefault\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Address",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/user-addresses/:id", "host": ["{{base_url}}"], "path": ["api","v1","user-addresses",":id"], "variable": [{ "key": "id", "value": "<address_id>" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications", "host": ["{{base_url}}"], "path": ["api","v1","notifications"] }
+          }
+        },
+        {
+          "name": "Mark All As Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/read-all", "host": ["{{base_url}}"], "path": ["api","v1","notifications","read-all"] }
+          }
+        },
+        {
+          "name": "Mark One As Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/:id/read", "host": ["{{base_url}}"], "path": ["api","v1","notifications",":id","read"], "variable": [{ "key": "id", "value": "<notification_id>" }] }
+          }
+        },
+        {
+          "name": "Push System Notification (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/system", "host": ["{{base_url}}"], "path": ["api","v1","notifications","system"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Thông báo hệ thống\",\n  \"message\": \"Hệ thống sẽ bảo trì lúc 22:00 tối nay\",\n  \"targetUsers\": []\n}"
+            },
+            "description": "Gửi thông báo cho tất cả user (targetUsers rỗng) hoặc danh sách user cụ thể."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 Roles & Permissions (Admin)",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/roles", "host": ["{{base_url}}"], "path": ["api","v1","roles"] }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/roles", "host": ["{{base_url}}"], "path": ["api","v1","roles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"STAFF\",\n  \"description\": \"Nhân viên cửa hàng\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Permissions To Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/roles/:id/permissions", "host": ["{{base_url}}"], "path": ["api","v1","roles",":id","permissions"], "variable": [{ "key": "id", "value": "<role_id>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\"<permission_id_1>\", \"<permission_id_2>\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Permissions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/roles/permissions", "host": ["{{base_url}}"], "path": ["api","v1","roles","permissions"] }
+          }
+        },
+        {
+          "name": "Create Permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/roles/permissions", "host": ["{{base_url}}"], "path": ["api","v1","roles","permissions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"manage_products\",\n  \"description\": \"Quản lý sản phẩm\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Audit Logs (Admin)",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/audit-logs?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","audit-logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Xem nhật ký hoạt động hệ thống. Yêu cầu role ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📤 Uploads",
+      "item": [
+        {
+          "name": "Upload Single Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/uploads/single", "host": ["{{base_url}}"], "path": ["api","v1","uploads","single"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            },
+            "description": "Upload 1 ảnh. Content-Type: multipart/form-data, field name: file"
+          }
+        },
+        {
+          "name": "Upload Multiple Images",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/uploads/multiple", "host": ["{{base_url}}"], "path": ["api","v1","uploads","multiple"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "type": "file", "src": "" },
+                { "key": "files", "type": "file", "src": "" }
+              ]
+            },
+            "description": "Upload nhiều ảnh (max 10). Field name: files"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👟 Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products?min=0",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","products"],
+              "query": [{ "key": "min", "value": "0", "description": "Giá tối thiểu" }]
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/products/:id", "host": ["{{base_url}}"], "path": ["api","v1","products",":id"], "variable": [{ "key": "id", "value": "<product_id>" }] }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/products", "host": ["{{base_url}}"], "path": ["api","v1","products"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nike Air Max 270\",\n  \"description\": \"Giày thể thao Nike Air Max 270\",\n  \"category\": \"<category_id>\",\n  \"images\": [\"https://example.com/img1.jpg\"],\n  \"price\": 2500000\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/products/:id", "host": ["{{base_url}}"], "path": ["api","v1","products",":id"], "variable": [{ "key": "id", "value": "<product_id>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 2200000,\n  \"title\": \"Nike Air Max 270 - Sale\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Product (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/products/:id", "host": ["{{base_url}}"], "path": ["api","v1","products",":id"], "variable": [{ "key": "id", "value": "<product_id>" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗂️ Categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?name=",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","categories"],
+              "query": [{ "key": "name", "value": "", "description": "Tìm kiếm theo tên" }]
+            }
+          }
+        },
+        {
+          "name": "Get Category By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/categories/:id", "host": ["{{base_url}}"], "path": ["api","v1","categories",":id"], "variable": [{ "key": "id", "value": "<category_id>" }] }
+          }
+        },
+        {
+          "name": "Get Products By Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/categories/:id/products", "host": ["{{base_url}}"], "path": ["api","v1","categories",":id","products"], "variable": [{ "key": "id", "value": "<category_id>" }] }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/categories", "host": ["{{base_url}}"], "path": ["api","v1","categories"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Giày Thể Thao\",\n  \"image\": \"https://example.com/sneaker.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/categories/:id", "host": ["{{base_url}}"], "path": ["api","v1","categories",":id"], "variable": [{ "key": "id", "value": "<category_id>" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Giày Chạy Bộ\",\n  \"image\": \"https://example.com/running.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Category (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/categories/:id", "host": ["{{base_url}}"], "path": ["api","v1","categories",":id"], "variable": [{ "key": "id", "value": "<category_id>" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Carts",
+      "item": [
+        {
+          "name": "Get My Cart",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/carts", "host": ["{{base_url}}"], "path": ["api","v1","carts"] }
+          }
+        },
+        {
+          "name": "Add To Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/carts/add", "host": ["{{base_url}}"], "path": ["api","v1","carts","add"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"<product_id>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove From Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/carts/remove", "host": ["{{base_url}}"], "path": ["api","v1","carts","remove"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"<product_id>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Decrease Quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/carts/decrease", "host": ["{{base_url}}"], "path": ["api","v1","carts","decrease"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"<product_id>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Modify Cart Quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/carts/modify", "host": ["{{base_url}}"], "path": ["api","v1","carts","modify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"<product_id>\",\n  \"quantity\": 3\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
