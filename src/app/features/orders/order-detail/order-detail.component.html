@@ -1,0 +1,92 @@
+<div class="order-detail-container">
+  <div class="header">
+    <a routerLink="/orders" class="back-link">← Back to Orders</a>
+    <h2>Order Details</h2>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading details...</div>
+
+  <div *ngIf="!isLoading && orderData" class="detail-grid">
+    
+    <!-- LEFT -->
+    <div class="left-col">
+      <div class="section-card">
+        <div class="card-header">
+          <h3>Order #{{ orderData.order.orderCode }}</h3>
+          <span class="status-badge" [ngClass]="getStatusClass(orderData.order.status)">
+            {{ orderData.order.status | uppercase }}
+          </span>
+        </div>
+        <p class="date">Placed on {{ orderData.order.createdAt | date:'medium' }}</p>
+
+        <div class="items-list">
+          <div class="order-item" *ngFor="let item of orderData.order.items">
+            <img [src]="item.thumbnail" alt="Product" />
+            <div class="item-info">
+              <h4>{{ item.productName }}</h4>
+              <p>Size: {{ item.variantInfo.size }} | Color: {{ item.variantInfo.color }}</p>
+              <div class="pricing">
+                <span>{{ item.price | number:'1.0-0' }}đ × {{ item.quantity }}</span>
+                <strong>{{ item.subtotal | number:'1.0-0' }}đ</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="totals-section">
+          <div class="row"><span>Subtotal:</span> <span>{{ orderData.order.totalAmount | number:'1.0-0' }}đ</span></div>
+          <div class="row"><span>Shipping:</span> <span>Free</span></div>
+          <div class="row grand-total"><span>Total:</span> <span>{{ orderData.order.totalAmount | number:'1.0-0' }}đ</span></div>
+        </div>
+      </div>
+
+      <div class="section-card mt-4" *ngIf="orderData.order.cancelReason">
+        <h3 class="text-danger">Cancellation Reason</h3>
+        <p>{{ orderData.order.cancelReason }}</p>
+        <small>Cancelled at: {{ orderData.order.cancelledAt | date:'medium' }}</small>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+      <div class="section-card">
+        <h3>Shipping Details</h3>
+        <div class="info-block">
+          <strong>{{ orderData.order.shippingAddress.fullName }}</strong>
+          <p>{{ orderData.order.shippingAddress.phone }}</p>
+          <p>{{ orderData.order.shippingAddress.addressDetail }}</p>
+          <p>{{ orderData.order.shippingAddress.ward }}, {{ orderData.order.shippingAddress.district }}, {{ orderData.order.shippingAddress.province }}</p>
+        </div>
+        <div class="info-block mt-3" *ngIf="orderData.order.note">
+          <strong>Notes:</strong>
+          <p>{{ orderData.order.note }}</p>
+        </div>
+      </div>
+
+      <div class="section-card mt-4">
+        <h3>Payment Information</h3>
+        <div class="info-block">
+          <p>Method: <strong>{{ orderData.order.payment?.method === 'cod' ? 'Cash on Delivery (COD)' : 'Online Payment' }}</strong></p>
+          <p>Status: <strong [class.text-success]="orderData.order.payment?.status === 'paid'">{{ orderData.order.payment?.status | uppercase }}</strong></p>
+        </div>
+      </div>
+      
+      <div class="section-card mt-4" *ngIf="orderData.transactions && orderData.transactions.length > 0">
+        <h3>Transaction History</h3>
+        <div class="timeline">
+          <div class="t-item" *ngFor="let t of orderData.transactions">
+            <div class="t-dot"></div>
+            <div class="t-content">
+              <strong>{{ t.type | uppercase }} - {{ t.status | uppercase }}</strong>
+              <small>{{ t.createdAt | date:'short' }}</small>
+              <p>{{ t.description }}</p>
+              <span class="t-amount" *ngIf="t.type === 'payment'">+{{ t.amount | number:'1.0-0' }}đ</span>
+              <span class="t-amount refund" *ngIf="t.type === 'refund'">-{{ t.amount | number:'1.0-0' }}đ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,71 @@
+.order-detail-container { padding: 32px; max-width: 1200px; margin: 0 auto; }
+.header { margin-bottom: 24px;
+  .back-link { color: var(--text-secondary); text-decoration: none; font-size: 14px; margin-bottom: 8px; display: inline-block; &:hover { color: #fff; } }
+  h2 { font-size: 24px; color: #fff; margin: 0; }
+}
+
+.mt-4 { margin-top: 24px; }
+.mt-3 { margin-top: 16px; }
+.text-danger { color: var(--error); }
+.text-success { color: #10b981; }
+
+.detail-grid { display: flex; gap: 32px; align-items: flex-start; }
+.left-col { flex: 2; }
+.right-col { flex: 1; }
+
+.section-card { background: var(--surface-dark); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 24px;
+  h3 { margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; }
+}
+
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  h3 { border: none; padding: 0; margin: 0; }
+}
+.date { color: var(--text-secondary); font-size: 14px; margin-top: 0; margin-bottom: 24px; }
+
+.status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; letter-spacing: 0.5px;
+  &.badge-warning { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+  &.badge-info { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+  &.badge-primary { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; }
+  &.badge-success { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+  &.badge-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+  &.badge-secondary { background: rgba(255, 255, 255, 0.1); color: #d1d5db; }
+}
+
+.items-list { margin-bottom: 32px; }
+.order-item { display: flex; gap: 16px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; }
+  .item-info { flex: 1; 
+    h4 { margin: 0 0 4px 0; color: #fff; font-size: 16px; }
+    p { margin: 0 0 12px 0; color: var(--text-secondary); font-size: 14px; }
+    .pricing { display: flex; justify-content: space-between; align-items: center;
+      span { color: var(--text-secondary); font-size: 14px; }
+      strong { color: var(--primary); font-size: 16px; }
+    }
+  }
+}
+
+.totals-section { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px;
+  .row { display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--text-secondary); font-size: 15px; }
+  .grand-total { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 0;
+    span:last-child { color: var(--primary); }
+  }
+}
+
+.info-block {
+  strong { display: block; color: #fff; margin-bottom: 8px; }
+  p { margin: 0 0 4px 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+}
+
+/* Timeline Transactions */
+.timeline { position: relative; padding-left: 20px; border-left: 2px solid rgba(255,255,255,0.1); }
+.t-item { position: relative; padding-bottom: 24px;
+  &:last-child { padding-bottom: 0; }
+  .t-dot { position: absolute; left: -25px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid var(--surface-dark); }
+  .t-content {
+    strong { display: block; color: #fff; font-size: 14px; margin-bottom: 4px; }
+    small { display: block; color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+    p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+    .t-amount { display: block; margin-top: 8px; color: #10b981; font-weight: bold; font-size: 14px; }
+    .t-amount.refund { color: var(--error); }
+  }
+}
