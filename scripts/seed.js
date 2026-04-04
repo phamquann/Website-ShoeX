@@ -18,15 +18,8 @@ mongoose.connect(config.MONGODB_URI)
 const seedData = async () => {
   try {
     console.log('--- Clearing ALL collections ---');
-    await Promise.all([
-      roleModel.deleteMany({}),
-      userModel.deleteMany({}),
-      permissionModel.deleteMany({}),
-      brandModel.deleteMany({}),
-      categoryModel.deleteMany({}),
-      productModel.deleteMany({}),
-      productVariantModel.deleteMany({})
-    ]);
+    await mongoose.connection.dropDatabase();
+    console.log('✅ Database dropped (indexes cleared)');
 
     // ===== 1. PERMISSIONS =====
     console.log('--- Seeding Permissions ---');

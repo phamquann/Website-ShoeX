@@ -44,10 +44,10 @@ app.use('/api/v1/categories', require('./modules/category/categoryRoute'));
 app.use('/api/v1/products', require('./modules/product/productRoute'));
 app.use('/api/v1/product-variants', require('./modules/productVariant/productVariantRoute'));
 
-// ===== TV3: Cart (legacy) =====
-app.use('/api/v1/carts', require('./routes/carts'));
-
-// ===== TV4: Order/Payment (chờ triển khai) =====
+// ===== TV3: Cart, Checkout, Order =====
+app.use('/api/v1/carts', require('./modules/cart/cartRoute'));
+app.use('/api/v1/checkout', require('./modules/checkout/checkoutRoute'));
+app.use('/api/v1/orders', require('./modules/order/orderRoute'));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

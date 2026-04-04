@@ -45,6 +45,7 @@ const getAll = async (req, res) => {
       productModel.find(filter)
         .populate('brand', 'name slug logo')
         .populate('category', 'name slug')
+        .populate({ path: 'variants', match: { isDeleted: false } })
         .sort(sortOption).skip(skip).limit(parseInt(limit)),
       productModel.countDocuments(filter)
     ]);
