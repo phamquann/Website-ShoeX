@@ -29,4 +29,28 @@ export class AuthService {
     localStorage.setItem('refreshToken', authData.refreshToken);
     localStorage.setItem('user', JSON.stringify(authData.user));
   }
+
+  isLoggedIn(): boolean {
+    return !!localStorage.getItem('accessToken');
+  }
+
+  getUser(): any {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
+  refreshToken(): Observable<any> {
+    const token = this.getRefreshToken();
+    return this.http.post(`${this.apiUrl}/refresh-token`, { refreshToken: token });
+  }
+
+  hasRole(roles: string[]): boolean {
+    const user = this.getUser();
+    if (!user || !user.role) return false;
+    return roles.includes(user.role.name);
+  }
 }

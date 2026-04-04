@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { NotificationService } from '../../services/notification/notification.service';
+import { CartService } from '../../services/cart/cart.service';
 
 @Component({
   selector: 'app-admin-layout',
@@ -16,36 +17,58 @@ import { NotificationService } from '../../services/notification/notification.se
           <h2>ShoeX</h2>
         </div>
         <nav class="sidebar-menu">
-          <a class="menu-item" routerLink="/dashboard" routerLinkActive="active">
+          <a class="menu-item" routerLink="/dashboard" routerLinkActive="active" *ngIf="userRole !== 'CUSTOMER'">
             <i class="icon-dashboard"></i> Dashboard
           </a>
-          <a class="menu-item" routerLink="/users" routerLinkActive="active" *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
-            <i class="icon-users"></i> Users Management
-          </a>
-          <a class="menu-item" routerLink="/roles" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
-            <i class="icon-roles"></i> Roles & Permissions
-          </a>
-          <a class="menu-item" routerLink="/audit-logs" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
-            <i class="icon-audit"></i> Audit Logs
-          </a>
-          <a class="menu-item" routerLink="/system-notifications" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
-            <i class="icon-notification"></i> Push Notification
-          </a>
-          <a class="menu-item" routerLink="/addresses" routerLinkActive="active">
-            <i class="icon-address" style="margin-right:8px">🗺️</i> Địa Chỉ Giao Hàng
-          </a>
-          <a class="menu-item" routerLink="/brands" routerLinkActive="active" *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
-            <i class="icon-brand" style="margin-right:8px">🏷️</i> Brands
-          </a>
-          <a class="menu-item" routerLink="/categories" routerLinkActive="active" *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
-            <i class="icon-category" style="margin-right:8px">📂</i> Categories
-          </a>
-          <a class="menu-item" routerLink="/products" routerLinkActive="active" *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
-            <i class="icon-product" style="margin-right:8px">👟</i> Products
-          </a>
+
+          <!-- ADMIN / STAFF ONLY -->
+          <ng-container *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
+            <div class="menu-label">QUẢN TRỊ</div>
+            <a class="menu-item" routerLink="/users" routerLinkActive="active">
+              <i class="icon-users"></i> Users Management
+            </a>
+            <a class="menu-item" routerLink="/roles" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
+              <i class="icon-roles"></i> Roles & Permissions
+            </a>
+            <a class="menu-item" routerLink="/brands" routerLinkActive="active">
+              <i class="icon-brand" style="margin-right:8px">🏷️</i> Brands
+            </a>
+            <a class="menu-item" routerLink="/categories" routerLinkActive="active">
+              <i class="icon-category" style="margin-right:8px">📂</i> Categories
+            </a>
+            <a class="menu-item" routerLink="/products" routerLinkActive="active">
+              <i class="icon-product" style="margin-right:8px">👟</i> Products
+            </a>
+            <a class="menu-item" routerLink="/audit-logs" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
+              <i class="icon-audit"></i> Audit Logs
+            </a>
+            <a class="menu-item" routerLink="/system-notifications" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
+              <i class="icon-notification"></i> Push Notification
+            </a>
+          </ng-container>
+
+          <!-- CUSTOMER ONLY -->
+          <ng-container *ngIf="userRole === 'CUSTOMER'">
+            <div class="menu-label">MUA SẮM</div>
+            <a class="menu-item" routerLink="/products-catalog" routerLinkActive="active">
+              <i class="icon-shop" style="margin-right:8px">🛍️</i> Product Catalog
+            </a>
+            <a class="menu-item" routerLink="/cart" routerLinkActive="active" style="position: relative;">
+              <i class="icon-cart" style="margin-right:8px">🛒</i> Giỏ Hàng
+              <span class="badge-count" style="position: static; margin-left: auto;" *ngIf="(cartCount$ | async) as count">{{ count }}</span>
+            </a>
+            <a class="menu-item" routerLink="/addresses" routerLinkActive="active">
+              <i class="icon-address" style="margin-right:8px">🗺️</i> Địa Chỉ Nhận Hàng
+            </a>
+          </ng-container>
+
           <div class="menu-divider"></div>
+          <a class="menu-item" routerLink="/orders" routerLinkActive="active">
+            <i class="icon-order" style="margin-right:8px">📦</i> {{ userRole === 'ADMIN' || userRole === 'STAFF' ? 'Quản Lý Đơn Hàng' : 'Đơn Hàng Của Tôi' }}
+          </a>
+
           <a class="menu-item logout" (click)="logout()">
-            <i class="icon-logout"></i> Logout
+            <i class="icon-logout"></i> Đăng xuất
           </a>
         </nav>
       </aside>
@@ -109,6 +132,7 @@ import { NotificationService } from '../../services/notification/notification.se
     .sidebar-menu .menu-item.logout { margin-top: auto; color: var(--error); }
     .sidebar-menu .menu-item.logout:hover { background: rgba(239, 68, 68, 0.1); }
     .sidebar-menu .menu-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 16px 0; }
+    .sidebar-menu .menu-label { padding: 12px 16px 8px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; }
     .main-content { flex: 1; display: flex; flex-direction: column; }
     .topbar { height: 72px; padding: 0 32px; background: var(--surface-dark); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; }
     .topbar .search-bar { font-weight: 600; color: #fff; display: flex; align-items: center; gap: 12px; }
@@ -136,7 +160,7 @@ import { NotificationService } from '../../services/notification/notification.se
     .notif-content p { color: var(--text-secondary); font-size: 13px; margin: 0; line-height: 1.4; }
   `]
 })
-export class AdminLayoutComponent implements OnInit {
+export class AdminLayoutComponent implements OnInit, OnDestroy {
   userRole: string = '';
   userName: string = 'User';
   avatarUrl: string = '';
@@ -145,16 +169,31 @@ export class AdminLayoutComponent implements OnInit {
   unreadCount: number = 0;
   showNotifications = false;
 
-  constructor(private router: Router, private notificationService: NotificationService) {}
+  cartCount$ = this.cartService.cartCount$;
+
+  private pollingInterval: any;
+
+  constructor(
+    private router: Router, 
+    private notificationService: NotificationService,
+    private cartService: CartService
+  ) {}
 
   ngOnInit() {
     this.loadUserData();
     this.loadNotifications();
+    this.cartService.getMyCart().subscribe(); // Initial fetch
     
     // Listen for storage changes if profile gets updated
     window.addEventListener('storage', () => this.loadUserData());
     // Fallback: poll every 10s to reflect layout changes fast
-    setInterval(() => this.loadUserData(), 10000);
+    this.pollingInterval = setInterval(() => this.loadUserData(), 10000);
+  }
+
+  ngOnDestroy() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
   
   loadUserData() {
@@ -166,6 +205,10 @@ export class AdminLayoutComponent implements OnInit {
         this.userName = user.fullName || user.username || 'User';
         this.avatarUrl = user.avatarUrl || '';
         
+        if (this.userRole === 'CUSTOMER' && (this.router.url === '/dashboard' || this.router.url === '/')) {
+          this.router.navigate(['/products-catalog']);
+        }
+
         if (this.router.url.includes('/users') && this.userRole !== 'ADMIN' && this.userRole !== 'STAFF') {
            this.router.navigate(['/dashboard']);
         }

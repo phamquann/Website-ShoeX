@@ -1,0 +1,94 @@
+<div class="checkout-container">
+  <h2>Checkout</h2>
+
+  <div *ngIf="isLoading" class="loading">Loading details...</div>
+
+  <div *ngIf="!isLoading && cart" class="checkout-grid">
+    
+    <!-- LEFT: Form Details -->
+    <div class="checkout-form">
+      
+      <!-- Addresses -->
+      <div class="section-card">
+        <div class="section-header">
+          <h3>1. Địa Chỉ Giao Hàng</h3>
+          <a routerLink="/addresses" class="manage-link">+ Thêm/Quản lý</a>
+        </div>
+        <div *ngIf="addresses.length === 0" class="no-address">
+          <p>Bạn chưa có địa chỉ nào. <a routerLink="/addresses">Bấm vào đây để thêm</a>.</p>
+        </div>
+        <div class="address-list" *ngIf="addresses.length > 0">
+          <div class="address-item" *ngFor="let addr of addresses" 
+               [class.selected]="selectedAddressId === addr._id"
+               (click)="selectedAddressId = addr._id">
+            <div class="radio-circle"></div>
+            <div class="addr-details">
+              <strong>{{ addr.fullName }} ({{ addr.phone }})</strong>
+              <p>{{ addr.addressDetail }}, {{ addr.ward }}, {{ addr.district }}, {{ addr.province }}</p>
+            </div>
+            <span class="badge" *ngIf="addr.isDefault">Default</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="section-card mt-4">
+        <h3>2. Payment Method</h3>
+        <div class="payment-options">
+          <label class="payment-option" [class.selected]="paymentMethod === 'cod'">
+            <input type="radio" name="payment" value="cod" [(ngModel)]="paymentMethod">
+            <div class="pay-info">
+              <strong>Cash on Delivery (COD)</strong>
+              <p>Pay when you receive the order</p>
+            </div>
+          </label>
+          <label class="payment-option" [class.selected]="paymentMethod === 'online_simulated'">
+            <input type="radio" name="payment" value="online_simulated" [(ngModel)]="paymentMethod">
+            <div class="pay-info">
+              <strong>Simulated Online Payment</strong>
+              <p>Test gateway (auto-approve)</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="section-card mt-4">
+        <h3>3. Ghi Chú Đơn Hàng</h3>
+        <textarea [(ngModel)]="note" placeholder="Dặn dò gì thêm cho chúng tôi không?"></textarea>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Order Summary -->
+    <div class="order-summary">
+      <h3>Tóm Tắt Đơn Hàng</h3>
+      
+      <div class="order-items">
+        <div class="o-item" *ngFor="let item of cart.items">
+          <img [src]="item.product.thumbnail" alt="prod" />
+          <div class="o-item-details">
+            <h4>{{ item.product.name }}</h4>
+            <small>{{ item.variant.size }} | {{ item.variant.color.name }} × {{ item.quantity }}</small>
+            <p>{{ item.subtotal | number:'1.0-0' }}đ</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div class="row"><span>Tổng tiền hàng</span><span>{{ cart.totalAmount | number:'1.0-0' }}đ</span></div>
+        <div class="row"><span>Phí vận chuyển</span><span>Miễn phí</span></div>
+        <div class="row grand-total"><span>Tổng cộng</span><span>{{ cart.totalAmount | number:'1.0-0' }}đ</span></div>
+      </div>
+
+      <button class="btn btn-primary w-100" 
+              [disabled]="isProcessing || !selectedAddressId || addresses.length === 0" 
+              (click)="placeOrder()">
+        {{ isProcessing ? 'Đang xử lý...' : 'Đặt Hàng' }}
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
