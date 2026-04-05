@@ -38,4 +38,13 @@ export class OrderService {
   updateOrderStatus(id: string, status: string, cancelReason?: string): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}/status`, { status, cancelReason });
   }
+
+  confirmReceived(id: string): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${id}/complete`, {});
+  }
+
+  getDashboardOverview(months = 6): Observable<any> {
+    const params = new HttpParams().set('months', months);
+    return this.http.get<any>(`${this.apiUrl}/dashboard/overview`, { params });
+  }
 }

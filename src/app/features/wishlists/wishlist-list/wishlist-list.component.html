@@ -9,8 +9,16 @@
       </thead>
       <tbody>
         <tr *ngFor="let item of products">
-          <td><img *ngIf="item.thumbnail" [src]="item.thumbnail" style="width:60px; height:60px; border-radius:6px; object-fit:cover;"></td>
-          <td><strong>{{ item.name }}</strong></td>
+          <td>
+            <a [routerLink]="['/products-catalog', item._id]" title="Xem chi tiết sản phẩm">
+              <img *ngIf="item.thumbnail" [src]="item.thumbnail" style="width:60px; height:60px; border-radius:6px; object-fit:cover;">
+            </a>
+          </td>
+          <td>
+            <a [routerLink]="['/products-catalog', item._id]" style="color:inherit; text-decoration:none;">
+              <strong>{{ item.name }}</strong>
+            </a>
+          </td>
           <td><strong style="color:var(--primary);">{{ item.salePrice || item.originalPrice | number:'1.0-0' }}đ</strong></td>
           <td><span class="badge" [ngClass]="item.isActive?'badge-success':'badge-error'">{{item.isActive?'Còn hàng':'Hết hàng'}}</span></td>
           <td class="text-right">

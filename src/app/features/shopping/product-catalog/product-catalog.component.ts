@@ -6,6 +6,8 @@ import { CartService } from '../../../core/services/cart/cart.service';
 import { BrandService } from '../../../core/services/brand.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { RouterModule } from '@angular/router';
+import { WishlistService } from '../../../core/services/wishlist.service';
+
 
 @Component({
   selector: 'app-product-catalog',
@@ -39,7 +41,8 @@ export class ProductCatalogComponent implements OnInit {
     private productService: ProductService,
     private cartService: CartService,
     private brandService: BrandService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private wishlistService: WishlistService
   ) {}
 
   ngOnInit() {
@@ -131,9 +134,24 @@ export class ProductCatalogComponent implements OnInit {
     });
   }
 
+  addToWishlist(productId: string, event: Event) {
+    event.stopPropagation();
+    this.wishlistService.addToWishlist(productId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          alert('Đã thêm vào sản phẩm yêu thích!');
+        }
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Có lỗi xảy ra');
+      }
+    });
+  }
+
   getAvailableStock(variantId: string): number {
     if (!this.selectedProduct) return 0;
     const v = this.selectedProduct.variants.find((x:any) => x._id === variantId);
     return v ? (v.stock - v.reserved) : 0;
   }
+
 }

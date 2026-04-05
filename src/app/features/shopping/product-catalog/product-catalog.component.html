@@ -38,9 +38,10 @@
   <div *ngIf="isLoading" class="loading">Loading products...</div>
 
   <div class="product-grid" *ngIf="!isLoading">
-    <div class="product-card" *ngFor="let product of products" (click)="openProductModal(product)">
+    <div class="product-card" *ngFor="let product of products" [routerLink]="['/products-catalog', product._id]">
       <div class="img-container">
         <img [src]="product.thumbnail" [alt]="product.name" />
+        <button class="wishlist-btn" (click)="addToWishlist(product._id, $event)">❤️</button>
         <span class="brand-badge" *ngIf="product.brand">{{ product.brand.name }}</span>
       </div>
       <div class="card-body">
@@ -51,6 +52,9 @@
             <span class="price">{{ product.salePrice | number:'1.0-0' }}đ</span>
             <span class="old-price" *ngIf="product.salePrice < product.originalPrice">{{ product.originalPrice | number:'1.0-0' }}đ</span>
           </div>
+          <button class="view-detail" [routerLink]="['/products-catalog', product._id]" (click)="$event.stopPropagation()">
+            Xem chi tiết
+          </button>
           <button class="quick-add" (click)="openProductModal(product); $event.stopPropagation()">
             🛒
           </button>

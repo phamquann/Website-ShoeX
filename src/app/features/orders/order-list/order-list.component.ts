@@ -15,6 +15,7 @@ export class OrderListComponent implements OnInit {
   orders: any[] = [];
   isLoading = true;
   isAdmin = false;
+  completingOrderId = '';
   
   meta: any = {};
   currentPage = 1;
@@ -74,9 +75,33 @@ export class OrderListComponent implements OnInit {
       case 'confirmed': return 'badge-info';
       case 'shipping': return 'badge-primary';
       case 'delivered': return 'badge-success';
+      case 'completed': return 'badge-info';
       case 'cancelled': return 'badge-danger';
       default: return 'badge-secondary';
     }
+  }
+
+  confirmReceived(order: any) {
+    if (this.isAdmin || order.status !== 'delivered') return;
+
+    if (!confirm('Xác nhận bạn đã nhận được đơn hàng này?')) {
+      return;
+    }
+
+    this.completingOrderId = order._id;
+    this.orderService.confirmReceived(order._id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          alert('Đã xác nhận nhận hàng. Bạn có thể bấm Đánh giá sản phẩm.');
+          this.loadOrders();
+        }
+        this.completingOrderId = '';
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Không thể xác nhận nhận hàng');
+        this.completingOrderId = '';
+      }
+    });
   }
 
   updateStatus(order: any, newStatus: string) {

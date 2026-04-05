@@ -1,102 +1,234 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { UserService } from '../../core/services/user/user.service';
+import { RoleService } from '../../core/services/role/role.service';
+import { NotificationService } from '../../core/services/notification/notification.service';
+import { AuditLogService } from '../../core/services/audit-log/audit-log.service';
+import { AuthService } from '../../core/services/auth/auth.service';
+import { OrderService } from '../../core/services/order/order.service';
+
+interface DashboardStats {
+  totalUsers: number | null;
+  totalRoles: number | null;
+  unreadNotifications: number | null;
+  totalAuditLogs: number | null;
+}
+
+interface SalesSummary {
+  totalRevenue: number;
+  totalItemsSold: number;
+  fulfilledOrders: number;
+  averageOrderValue: number;
+}
+
+interface MonthlyRevenuePoint {
+  label: string;
+  revenue: number;
+  orders: number;
+  itemsSold: number;
+  barHeight: number;
+}
+
+interface TopProductPoint {
+  productName: string;
+  thumbnail: string;
+  quantitySold: number;
+  revenue: number;
+  barWidth: number;
+}
+
+interface StatusPoint {
+  status: string;
+  count: number;
+  barWidth: number;
+}
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  template: `
-    <div class="dashboard-container">
-      <div class="header">
-        <h1>Tổng Quan Hệ Thống</h1>
-        <p>Chào mừng trở lại! Xem thống kê nhanh của bạn dưới đây.</p>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="icon users">👤</div>
-          <div class="info">
-            <h3>Tổng Users</h3>
-            <p>1,234</p>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon roles">🛡️</div>
-          <div class="info">
-            <h3>Tổng Roles</h3>
-            <p>12</p>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon notification">🔔</div>
-          <div class="info">
-            <h3>Thông Báo Mới</h3>
-            <p>48</p>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon logs">📄</div>
-          <div class="info">
-            <h3>Audit Logs</h3>
-            <p>3,902</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .dashboard-container {
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-    }
-
-    .header {
-      h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }
-      p { color: var(--text-secondary); }
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 24px;
-    }
-
-    .stat-card {
-      background: var(--surface-dark);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 20px;
-      padding: 24px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      transition: all 0.3s;
-      cursor: pointer;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        border-color: rgba(79, 70, 229, 0.4);
-      }
-
-      .icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-
-        &.users { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
-        &.roles { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-        &.notification { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        &.logs { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
-      }
-
-      .info {
-        h3 { font-size: 14px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; }
-        p { font-size: 24px; font-weight: 700; color: #fff; }
-      }
-    }
-  `]
+  imports: [CommonModule],
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.scss']
 })
-export class HomeComponent {}
+export class HomeComponent implements OnInit {
+  isLoading = true;
+  isAdmin = false;
+  loadError = '';
+
+  stats: DashboardStats = {
+    totalUsers: null,
+    totalRoles: null,
+    unreadNotifications: null,
+    totalAuditLogs: null
+  };
+
+  sales: SalesSummary = {
+    totalRevenue: 0,
+    totalItemsSold: 0,
+    fulfilledOrders: 0,
+    averageOrderValue: 0
+  };
+
+  monthlyRevenue: MonthlyRevenuePoint[] = [];
+  topProducts: TopProductPoint[] = [];
+  statusBreakdown: StatusPoint[] = [];
+
+  constructor(
+    private authService: AuthService,
+    private userService: UserService,
+    private roleService: RoleService,
+    private notificationService: NotificationService,
+    private auditLogService: AuditLogService,
+    private orderService: OrderService
+  ) {}
+
+  ngOnInit(): void {
+    this.resolveRole();
+    this.loadDashboard();
+  }
+
+  formatValue(value: number | null): string {
+    if (this.isLoading) return '...';
+    if (value === null) return '--';
+    return new Intl.NumberFormat('vi-VN').format(value);
+  }
+
+  formatCurrency(value: number | null): string {
+    if (this.isLoading) return '...';
+    if (value === null) return '--';
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+
+  toStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      shipping: 'Shipping',
+      delivered: 'Delivered',
+      completed: 'Completed',
+      cancelled: 'Cancelled'
+    };
+    return map[status] || status;
+  }
+
+  private resolveRole(): void {
+    this.isAdmin = this.authService.hasRole(['ADMIN']);
+  }
+
+  private loadDashboard(): void {
+    const users$ = this.userService.getUsers(1, 1).pipe(catchError(() => of(null)));
+    const notifications$ = this.notificationService.getNotifications().pipe(catchError(() => of(null)));
+    const sales$ = this.orderService.getDashboardOverview(6).pipe(catchError(() => of(null)));
+
+    const roles$ = this.isAdmin
+      ? this.roleService.getRoles().pipe(catchError(() => of(null)))
+      : of(null);
+
+    const auditLogs$ = this.isAdmin
+      ? this.auditLogService.getLogs().pipe(catchError(() => of(null)))
+      : of(null);
+
+    forkJoin({ users: users$, roles: roles$, notifications: notifications$, auditLogs: auditLogs$, sales: sales$ }).subscribe(({ users, roles, notifications, auditLogs, sales }) => {
+      this.stats.totalUsers = this.extractMetaTotal(users, this.extractDataLength(users));
+      this.stats.totalRoles = this.extractDataLength(roles);
+      this.stats.unreadNotifications = this.extractUnreadCount(notifications);
+      this.stats.totalAuditLogs = this.extractMetaTotal(auditLogs, this.extractDataLength(auditLogs));
+
+      if (sales?.data) {
+        this.bindSalesData(sales.data);
+      } else {
+        this.loadError = 'Sales dashboard data is not available right now.';
+      }
+
+      this.isLoading = false;
+    });
+  }
+
+  private bindSalesData(data: any): void {
+    const summary = data?.summary || {};
+
+    this.sales = {
+      totalRevenue: Number(summary.totalRevenue || 0),
+      totalItemsSold: Number(summary.totalItemsSold || 0),
+      fulfilledOrders: Number(summary.fulfilledOrders || 0),
+      averageOrderValue: Number(summary.averageOrderValue || 0)
+    };
+
+    const monthlyRaw = Array.isArray(data?.monthlyRevenue) ? data.monthlyRevenue : [];
+    const maxRevenue = Math.max(...monthlyRaw.map((m: any) => Number(m.revenue || 0)), 0);
+    this.monthlyRevenue = monthlyRaw.map((row: any) => {
+      const revenue = Number(row.revenue || 0);
+      const barHeight = maxRevenue > 0 ? Math.max(8, Math.round((revenue / maxRevenue) * 100)) : 8;
+      return {
+        label: row.label || `${row.month}/${row.year}`,
+        revenue,
+        orders: Number(row.orders || 0),
+        itemsSold: Number(row.itemsSold || 0),
+        barHeight
+      };
+    });
+
+    const topProductsRaw = Array.isArray(data?.topProducts) ? data.topProducts : [];
+    const maxQuantity = Math.max(...topProductsRaw.map((p: any) => Number(p.quantitySold || 0)), 0);
+    this.topProducts = topProductsRaw.map((product: any) => {
+      const quantitySold = Number(product.quantitySold || 0);
+      const barWidth = maxQuantity > 0 ? Math.max(6, Math.round((quantitySold / maxQuantity) * 100)) : 6;
+      return {
+        productName: product.productName || 'Unknown product',
+        thumbnail: product.thumbnail || '',
+        quantitySold,
+        revenue: Number(product.revenue || 0),
+        barWidth
+      };
+    });
+
+    const statusRaw = Array.isArray(data?.statusBreakdown) ? data.statusBreakdown : [];
+    const maxStatusCount = Math.max(...statusRaw.map((s: any) => Number(s.count || 0)), 0);
+    this.statusBreakdown = statusRaw.map((status: any) => {
+      const count = Number(status.count || 0);
+      const barWidth = maxStatusCount > 0 ? Math.max(6, Math.round((count / maxStatusCount) * 100)) : 6;
+      return {
+        status: String(status.status || 'unknown'),
+        count,
+        barWidth
+      };
+    });
+  }
+
+  private extractMetaTotal(response: any, fallback: number | null): number | null {
+    if (response?.meta?.total !== undefined && response?.meta?.total !== null) {
+      return Number(response.meta.total);
+    }
+    return fallback;
+  }
+
+  private extractUnreadCount(response: any): number | null {
+    if (response?.meta?.unreadCount !== undefined && response?.meta?.unreadCount !== null) {
+      return Number(response.meta.unreadCount);
+    }
+
+    const data = this.extractDataArray(response);
+    if (!data) return null;
+
+    return data.filter((item: any) => !item?.isRead).length;
+  }
+
+  private extractDataLength(response: any): number | null {
+    const data = this.extractDataArray(response);
+    if (!data) return null;
+    return data.length;
+  }
+
+  private extractDataArray(response: any): any[] | null {
+    if (!response || !Array.isArray(response.data)) {
+      return null;
+    }
+    return response.data;
+  }
+}

@@ -1,1 +1,148 @@
-<p>home works!</p>
+<section class="dashboard-container">
+	<header class="header">
+		<h1>Sales Dashboard</h1>
+		<p>Live metrics: revenue, sold items, top products, and order trends.</p>
+	</header>
+
+	<div *ngIf="loadError" class="warning-banner">{{ loadError }}</div>
+
+	<div class="kpi-grid primary">
+		<article class="kpi-card">
+			<div class="icon revenue">$</div>
+			<div class="info">
+				<h3>Total Revenue</h3>
+				<p>{{ formatCurrency(sales.totalRevenue) }}</p>
+			</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="icon sold">S</div>
+			<div class="info">
+				<h3>Items Sold</h3>
+				<p>{{ formatValue(sales.totalItemsSold) }}</p>
+			</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="icon orders">O</div>
+			<div class="info">
+				<h3>Fulfilled Orders</h3>
+				<p>{{ formatValue(sales.fulfilledOrders) }}</p>
+			</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="icon aov">A</div>
+			<div class="info">
+				<h3>Avg Order Value</h3>
+				<p>{{ formatCurrency(sales.averageOrderValue) }}</p>
+			</div>
+		</article>
+	</div>
+
+	<div class="kpi-grid secondary">
+		<article class="kpi-card slim">
+			<div class="icon users">U</div>
+			<div class="info">
+				<h3>Total Users</h3>
+				<p>{{ formatValue(stats.totalUsers) }}</p>
+			</div>
+		</article>
+
+		<article class="kpi-card slim">
+			<div class="icon roles">R</div>
+			<div class="info">
+				<h3>Total Roles</h3>
+				<p>{{ formatValue(stats.totalRoles) }}</p>
+				<small *ngIf="!isAdmin">Admin only</small>
+			</div>
+		</article>
+
+		<article class="kpi-card slim">
+			<div class="icon notification">N</div>
+			<div class="info">
+				<h3>Unread Notifications</h3>
+				<p>{{ formatValue(stats.unreadNotifications) }}</p>
+			</div>
+		</article>
+
+		<article class="kpi-card slim">
+			<div class="icon logs">L</div>
+			<div class="info">
+				<h3>Audit Logs</h3>
+				<p>{{ formatValue(stats.totalAuditLogs) }}</p>
+				<small *ngIf="!isAdmin">Admin only</small>
+			</div>
+		</article>
+	</div>
+
+	<div class="chart-grid">
+		<section class="chart-card monthly">
+			<div class="chart-head">
+				<h2>Monthly Revenue</h2>
+				<span>Last 6 months</span>
+			</div>
+
+			<div class="monthly-chart" *ngIf="monthlyRevenue.length > 0; else noMonthlyData">
+				<div class="month-column" *ngFor="let point of monthlyRevenue">
+					<div class="bar-zone" [title]="point.label + ' | Revenue: ' + formatCurrency(point.revenue)">
+						<div class="bar-fill" [style.height.%]="point.barHeight"></div>
+					</div>
+					<p class="month-label">{{ point.label }}</p>
+					<p class="month-value">{{ formatCurrency(point.revenue) }}</p>
+				</div>
+			</div>
+
+			<ng-template #noMonthlyData>
+				<div class="empty-chart">No monthly sales data yet.</div>
+			</ng-template>
+		</section>
+
+		<section class="chart-card top-products">
+			<div class="chart-head">
+				<h2>Best Selling Products</h2>
+				<span>Top 5 by sold quantity</span>
+			</div>
+
+			<div class="row-list" *ngIf="topProducts.length > 0; else noTopProducts">
+				<div class="row-item" *ngFor="let product of topProducts">
+					<div class="row-title">
+						<p>{{ product.productName }}</p>
+						<small>{{ formatValue(product.quantitySold) }} sold</small>
+					</div>
+					<div class="row-bar">
+						<div class="row-fill" [style.width.%]="product.barWidth"></div>
+					</div>
+					<div class="row-meta">{{ formatCurrency(product.revenue) }}</div>
+				</div>
+			</div>
+
+			<ng-template #noTopProducts>
+				<div class="empty-chart">No product sales data yet.</div>
+			</ng-template>
+		</section>
+	</div>
+
+	<section class="chart-card status-card">
+		<div class="chart-head">
+			<h2>Order Status Distribution</h2>
+			<span>All order statuses</span>
+		</div>
+
+		<div class="row-list" *ngIf="statusBreakdown.length > 0; else noStatusData">
+			<div class="row-item" *ngFor="let status of statusBreakdown">
+				<div class="row-title">
+					<p>{{ toStatusLabel(status.status) }}</p>
+					<small>{{ formatValue(status.count) }} orders</small>
+				</div>
+				<div class="row-bar neutral">
+					<div class="row-fill" [style.width.%]="status.barWidth"></div>
+				</div>
+			</div>
+		</div>
+
+		<ng-template #noStatusData>
+			<div class="empty-chart">No order status data yet.</div>
+		</ng-template>
+	</section>
+</section>
