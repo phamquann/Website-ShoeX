@@ -1,0 +1,90 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h2>Brands Management</h2>
+      <p>Manage product brands</p>
+    </div>
+    <div class="header-right">
+      <div class="search-box">
+        <i class="icon-search">🔍</i>
+        <input type="text" placeholder="Search brands..." [(ngModel)]="searchQuery" (keyup.enter)="onSearch()">
+        <button class="btn btn-search" (click)="onSearch()">Search</button>
+      </div>
+      <button class="btn btn-primary" (click)="openAddModal()">
+        <i class="icon-plus">➕</i> Add New Brand
+      </button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th width="80">Logo</th>
+          <th>Name</th>
+          <th>Slug</th>
+          <th>Description</th>
+          <th width="120" class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of brands">
+          <td>
+            <div class="avatar" [style.backgroundImage]="'url(' + item.logo + ')'">
+              <span *ngIf="!item.logo">{{ item.name.charAt(0).toUpperCase() }}</span>
+            </div>
+          </td>
+          <td><strong>{{ item.name }}</strong></td>
+          <td><span class="badge">{{ item.slug }}</span></td>
+          <td><span class="text-truncate">{{ item.description }}</span></td>
+          <td class="text-right">
+            <div class="action-buttons">
+              <button class="btn-icon text-primary" (click)="openEditModal(item)">✏️</button>
+              <button class="btn-icon text-error" (click)="deleteBrand(item._id)">🗑️</button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="brands.length === 0">
+          <td colspan="5" class="text-center py-4">No brands found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-container" *ngIf="meta && meta.totalPages > 1">
+    <span class="page-info">Page {{meta.page}} of {{meta.totalPages}} (Total: {{meta.total}})</span>
+    <div class="pagination">
+      <button class="btn-page" [disabled]="meta.page === 1" (click)="changePage(meta.page - 1)">Previous</button>
+      <button class="btn-page active">{{ meta.page }}</button>
+      <button class="btn-page" [disabled]="meta.page === meta.totalPages" (click)="changePage(meta.page + 1)">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ editingBrand ? 'Edit Brand' : 'Add New Brand' }}</h3>
+      <button class="btn-close" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Brand Name <span class="text-error">*</span></label>
+        <input type="text" class="form-control" [(ngModel)]="brandForm.name" placeholder="Enter brand name">
+      </div>
+      <div class="form-group">
+        <label>Logo URL</label>
+        <input type="text" class="form-control" [(ngModel)]="brandForm.logo" placeholder="https://example.com/logo.png">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" [(ngModel)]="brandForm.description" rows="3" placeholder="Enter description"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="closeModal()">Cancel</button>
+      <button class="btn btn-primary" (click)="saveBrand()">{{ editingBrand ? 'Update' : 'Create' }}</button>
+    </div>
+  </div>
+</div>
