@@ -6,7 +6,39 @@ const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
 const userModel = require('../../schemas/users');
 const roleModel = require('../../schemas/roles');
-const refreshTokenModel = require('../../schemas/refreshTokens');
+
+const findEmbeddedToken = (user, token) => {
+  if (!user || !Array.isArray(user.refreshTokens)) return null;
+  return user.refreshTokens.find((item) => item.token === token) || null;
+};
+
+const revokeEmbeddedToken = async (userId, token) => {
+  return userModel.updateOne(
+    { _id: userId, 'refreshTokens.token': token },
+    {
+      $set: {
+        'refreshTokens.$.isRevoked': true,
+        'refreshTokens.$.updatedAt': new Date()
+      }
+    }
+  );
+};
+
+const pruneEmbeddedTokens = async (userId) => {
+  await userModel.updateOne(
+    { _id: userId },
+    {
+      $pull: {
+        refreshTokens: {
+          $or: [
+            { isRevoked: true },
+            { expiresAt: { $lte: new Date() } }
+          ]
+        }
+      }
+    }
+  );
+};
 
 /**
  * Generate tokens helper
@@ -24,9 +56,23 @@ const generateTokens = async (userId, userAgent = '', ipAddress = '') => {
     { expiresIn: config.REFRESH_TOKEN_EXPIRES }
   );
 
-  // Save refresh token to DB
+  // Save refresh token in user document
   const expiresAt = new Date(Date.now() + config.REFRESH_TOKEN_EXPIRES_MS);
-  await refreshTokenModel.create({ token: refreshToken, user: userId, expiresAt, userAgent, ipAddress });
+  await pruneEmbeddedTokens(userId);
+  await userModel.updateOne(
+    { _id: userId },
+    {
+      $push: {
+        refreshTokens: {
+          token: refreshToken,
+          expiresAt,
+          isRevoked: false,
+          userAgent,
+          ipAddress
+        }
+      }
+    }
+  );
 
   return { accessToken, refreshToken };
 };
@@ -176,24 +222,23 @@ const refreshToken = async (req, res) => {
       return response.unauthorized(res, "Invalid or expired refresh token");
     }
 
-    // Check token in DB
-    const storedToken = await refreshTokenModel.findOne({
-      token,
-      isRevoked: false,
-      expiresAt: { $gt: new Date() }
-    });
-    if (!storedToken) {
-      return response.unauthorized(res, "Refresh token not found or revoked");
-    }
-
     const user = await userModel.findOne({ _id: decoded.id, isDeleted: false, status: true });
     if (!user) {
       return response.unauthorized(res, "User not found");
     }
 
-    // Revoke old refresh token (rotation)
-    storedToken.isRevoked = true;
-    await storedToken.save();
+    const embeddedToken = findEmbeddedToken(user, token);
+    const isEmbeddedValid = Boolean(
+      embeddedToken &&
+      !embeddedToken.isRevoked &&
+      embeddedToken.expiresAt > new Date()
+    );
+
+    if (isEmbeddedValid) {
+      await revokeEmbeddedToken(user._id, token);
+    } else {
+      return response.unauthorized(res, "Refresh token not found or revoked");
+    }
 
     const userAgent = req.headers['user-agent'] || '';
     const ipAddress = req.ip || '';
@@ -214,7 +259,7 @@ const logout = async (req, res) => {
     const { refreshToken: token } = req.body;
 
     if (token) {
-      await refreshTokenModel.updateOne({ token }, { isRevoked: true });
+      await revokeEmbeddedToken(req.user._id, token);
     }
 
     await logAction(req, "LOGOUT", "user", req.user._id);
@@ -301,7 +346,7 @@ const changePassword = async (req, res) => {
     await user.save();
 
     // Revoke all refresh tokens on password change
-    await refreshTokenModel.updateMany({ user: user._id }, { isRevoked: true });
+    await userModel.updateOne({ _id: user._id }, { $set: { refreshTokens: [] } });
 
     await logAction(req, "CHANGE_PASSWORD", "user", user._id);
     return response.success(res, null, "Password changed successfully. Please login again");
@@ -361,7 +406,7 @@ const resetPassword = async (req, res) => {
     user.forgotPasswordTokenExp = null;
     await user.save();
 
-    await refreshTokenModel.updateMany({ user: user._id }, { isRevoked: true });
+    await userModel.updateOne({ _id: user._id }, { $set: { refreshTokens: [] } });
 
     return response.success(res, null, "Password reset successfully. Please login with new password");
 

@@ -1,7 +1,72 @@
 const cartModel = require('../../schemas/carts');
-const cartItemModel = require('../../schemas/cartItems');
-const variantModel = require('../../schemas/productVariants');
+const productModel = require('../../schemas/products');
+const variantModel = productModel.ProductVariant;
 const response = require('../../middlewares/response');
+
+const getOrCreateCart = async (userId) => {
+  let cart = await cartModel.findOne({ user: userId });
+  if (!cart) {
+    cart = await cartModel.create({ user: userId });
+  }
+  return cart;
+};
+
+const findCartItemByInput = (cart, payload = {}) => {
+  const { itemId, variantId } = payload;
+
+  if (itemId) {
+    return cart.items.find((item) => item._id.toString() === itemId.toString()) || null;
+  }
+
+  if (variantId) {
+    return cart.items.find((item) => item.variant.toString() === variantId.toString()) || null;
+  }
+
+  return null;
+};
+
+const buildCartPayload = async (cart) => {
+  await cart.populate([
+    {
+      path: 'items.product',
+      select: 'name slug thumbnail salePrice originalPrice isActive isDeleted',
+      populate: { path: 'brand', select: 'name' }
+    },
+    {
+      path: 'items.variant',
+      select: 'size color sku price stock reserved isDeleted'
+    }
+  ]);
+
+  const validItems = (cart.items || []).filter((item) =>
+    item.product && !item.product.isDeleted && item.product.isActive &&
+    item.variant && !item.variant.isDeleted
+  );
+
+  let totalAmount = 0;
+  const items = validItems.map((item) => {
+    const unitPrice = item.variant.price > 0 ? item.variant.price : item.product.salePrice;
+    const subtotal = unitPrice * item.quantity;
+    totalAmount += subtotal;
+
+    return {
+      _id: item._id,
+      product: item.product,
+      variant: item.variant,
+      quantity: item.quantity,
+      unitPrice,
+      subtotal,
+      available: item.variant.stock - item.variant.reserved
+    };
+  });
+
+  return {
+    _id: cart._id,
+    items,
+    totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
+    totalAmount
+  };
+};
 
 /**
  * GET /api/v1/carts/me
@@ -9,51 +74,10 @@ const response = require('../../middlewares/response');
  */
 const getMyCart = async (req, res) => {
   try {
-    let cart = await cartModel.findOne({ user: req.user._id });
-    if (!cart) {
-      cart = await cartModel.create({ user: req.user._id });
-    }
+    const cart = await getOrCreateCart(req.user._id);
+    const payload = await buildCartPayload(cart);
 
-    const items = await cartItemModel.find({ cart: cart._id })
-      .populate({
-        path: 'product',
-        select: 'name slug thumbnail salePrice originalPrice isActive isDeleted',
-        populate: { path: 'brand', select: 'name' }
-      })
-      .populate({
-        path: 'variant',
-        select: 'size color sku price stock reserved isDeleted'
-      });
-
-    // Filter out invalid items
-    const validItems = items.filter(item => 
-      item.product && !item.product.isDeleted && item.product.isActive &&
-      item.variant && !item.variant.isDeleted
-    );
-
-    // Tính tổng
-    let totalAmount = 0;
-    const cartItems = validItems.map(item => {
-      const unitPrice = item.variant.price > 0 ? item.variant.price : item.product.salePrice;
-      const subtotal = unitPrice * item.quantity;
-      totalAmount += subtotal;
-      return {
-        _id: item._id,
-        product: item.product,
-        variant: item.variant,
-        quantity: item.quantity,
-        unitPrice,
-        subtotal,
-        available: item.variant.stock - item.variant.reserved
-      };
-    });
-
-    return response.success(res, {
-      _id: cart._id,
-      items: cartItems,
-      totalItems: cartItems.reduce((sum, i) => sum + i.quantity, 0),
-      totalAmount
-    }, 'Cart retrieved');
+    return response.success(res, payload, 'Cart retrieved');
   } catch (error) {
     return response.serverError(res, 'Failed to get cart', error);
   }
@@ -83,28 +107,26 @@ const addItem = async (req, res) => {
     }
 
     // Lấy/tạo cart
-    let cart = await cartModel.findOne({ user: req.user._id });
-    if (!cart) {
-      cart = await cartModel.create({ user: req.user._id });
-    }
+    const cart = await getOrCreateCart(req.user._id);
 
     // Kiểm tra item đã tồn tại chưa
-    let existingItem = await cartItemModel.findOne({ cart: cart._id, variant: variantId });
+    let existingItem = cart.items.find((item) => item.variant.toString() === variantId.toString()) || null;
     if (existingItem) {
       const newQty = existingItem.quantity + quantity;
       if (available < newQty) {
         return response.badRequest(res, `Not enough stock. Available: ${available}, current in cart: ${existingItem.quantity}`);
       }
       existingItem.quantity = newQty;
-      await existingItem.save();
     } else {
-      existingItem = await cartItemModel.create({
-        cart: cart._id,
+      cart.items.push({
         product: variant.product._id,
         variant: variantId,
         quantity
       });
+      existingItem = cart.items[cart.items.length - 1];
     }
+
+    await cart.save();
 
     return response.success(res, existingItem, 'Item added to cart');
   } catch (error) {
@@ -122,10 +144,10 @@ const updateItem = async (req, res) => {
     const { quantity } = req.body;
     if (!quantity || quantity < 1) return response.badRequest(res, 'Quantity must be at least 1');
 
-    const cart = await cartModel.findOne({ user: req.user._id });
+    const cart = await getOrCreateCart(req.user._id);
     if (!cart) return response.notFound(res, 'Cart not found');
 
-    const item = await cartItemModel.findOne({ _id: req.params.id, cart: cart._id });
+    const item = cart.items.find((cartItem) => cartItem._id.toString() === req.params.id) || null;
     if (!item) return response.notFound(res, 'Cart item not found');
 
     const variant = await variantModel.findById(item.variant);
@@ -137,7 +159,7 @@ const updateItem = async (req, res) => {
     }
 
     item.quantity = quantity;
-    await item.save();
+    await cart.save();
 
     return response.success(res, item, 'Cart item updated');
   } catch (error) {
@@ -151,11 +173,14 @@ const updateItem = async (req, res) => {
  */
 const removeItem = async (req, res) => {
   try {
-    const cart = await cartModel.findOne({ user: req.user._id });
+    const cart = await getOrCreateCart(req.user._id);
     if (!cart) return response.notFound(res, 'Cart not found');
 
-    const item = await cartItemModel.findOneAndDelete({ _id: req.params.id, cart: cart._id });
-    if (!item) return response.notFound(res, 'Cart item not found');
+    const prevLength = cart.items.length;
+    cart.items = cart.items.filter((item) => item._id.toString() !== req.params.id);
+    if (cart.items.length === prevLength) return response.notFound(res, 'Cart item not found');
+
+    await cart.save();
 
     return response.success(res, null, 'Item removed from cart');
   } catch (error) {
@@ -169,14 +194,74 @@ const removeItem = async (req, res) => {
  */
 const clearCart = async (req, res) => {
   try {
-    const cart = await cartModel.findOne({ user: req.user._id });
+    const cart = await getOrCreateCart(req.user._id);
     if (!cart) return response.notFound(res, 'Cart not found');
 
-    await cartItemModel.deleteMany({ cart: cart._id });
+    cart.items = [];
+    await cart.save();
     return response.success(res, null, 'Cart cleared');
   } catch (error) {
     return response.serverError(res, 'Failed to clear cart', error);
   }
 };
 
-module.exports = { getMyCart, addItem, updateItem, removeItem, clearCart };
+/**
+ * POST /api/v1/carts/decrease
+ * Body: { itemId? | variantId? }
+ * Giảm 1 số lượng item, nếu còn 1 thì xóa khỏi giỏ
+ */
+const decreaseItem = async (req, res) => {
+  try {
+    const cart = await getOrCreateCart(req.user._id);
+    const item = findCartItemByInput(cart, req.body);
+
+    if (!item) {
+      return response.notFound(res, 'Cart item not found');
+    }
+
+    if (item.quantity <= 1) {
+      cart.items = cart.items.filter((cartItem) => cartItem._id.toString() !== item._id.toString());
+      await cart.save();
+      return response.success(res, null, 'Item removed from cart');
+    }
+
+    item.quantity -= 1;
+    await cart.save();
+
+    return response.success(res, item, 'Cart item decreased');
+  } catch (error) {
+    return response.serverError(res, 'Failed to decrease cart item', error);
+  }
+};
+
+/**
+ * POST /api/v1/carts/remove
+ * Body: { itemId? | variantId? }
+ */
+const removeByBody = async (req, res) => {
+  try {
+    const cart = await getOrCreateCart(req.user._id);
+    const item = findCartItemByInput(cart, req.body);
+
+    if (!item) {
+      return response.notFound(res, 'Cart item not found');
+    }
+
+    cart.items = cart.items.filter((cartItem) => cartItem._id.toString() !== item._id.toString());
+    await cart.save();
+
+    return response.success(res, null, 'Item removed from cart');
+  } catch (error) {
+    return response.serverError(res, 'Failed to remove cart item', error);
+  }
+};
+
+module.exports = {
+  getMyCart,
+  addItem,
+  updateItem,
+  removeItem,
+  clearCart,
+  decreaseItem,
+  removeByBody
+};

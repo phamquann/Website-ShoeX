@@ -1,5 +1,5 @@
-const variantModel = require('../../schemas/productVariants');
 const productModel = require('../../schemas/products');
+const variantModel = productModel.ProductVariant;
 const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
 

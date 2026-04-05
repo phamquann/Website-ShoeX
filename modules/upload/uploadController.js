@@ -35,7 +35,7 @@ const uploadSingle = async (req, res) => {
       return response.badRequest(res, "No file uploaded. Expected field name: 'file'");
     }
 
-    const type = req.body.type || 'other'; // avatar, product, banner, other
+    const type = req.body.type || 'other'; // avatar, product, other
     const uploadRec = await saveFileMetadata(req.file, req.user, type);
 
     if (req.user) await logAction(req, "UPLOAD_FILE_SINGLE", "uploadFile", uploadRec._id);

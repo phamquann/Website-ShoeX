@@ -1,9 +1,25 @@
-const Promotion = require('../../schemas/promotions');
+const Discount = require('../../schemas/discounts');
+
+const PROMOTION_KIND = 'promotion';
+
+const toPromotionPayload = (input = {}) => ({
+  kind: PROMOTION_KIND,
+  name: input.name,
+  description: input.description || '',
+  type: input.type,
+  discountType: input.discountType,
+  discountValue: input.discountValue,
+  startDate: input.startDate,
+  endDate: input.endDate,
+  applicableProducts: Array.isArray(input.applicableProducts) ? input.applicableProducts : [],
+  applicableCategories: Array.isArray(input.applicableCategories) ? input.applicableCategories : [],
+  applicableBrands: Array.isArray(input.applicableBrands) ? input.applicableBrands : [],
+  isActive: input.isActive ?? true
+});
 
 exports.create = async (req, res) => {
   try {
-    const promotion = new Promotion(req.body);
-    await promotion.save();
+    const promotion = await Discount.create(toPromotionPayload(req.body));
     res.status(201).json({ success: true, data: promotion });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -12,7 +28,11 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const promotions = await Promotion.find().populate('applicableProducts').populate('applicableCategories').populate('applicableBrands');
+    const promotions = await Discount.find({ kind: PROMOTION_KIND })
+      .populate('applicableProducts')
+      .populate('applicableCategories')
+      .populate('applicableBrands');
+
     res.status(200).json({ success: true, data: promotions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -21,7 +41,8 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const promotion = await Promotion.findById(req.params.id);
+    const promotion = await Discount.findOne({ _id: req.params.id, kind: PROMOTION_KIND });
+
     if (!promotion) return res.status(404).json({ success: false, message: 'Not found' });
     res.status(200).json({ success: true, data: promotion });
   } catch (error) {
@@ -31,7 +52,17 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const promotion = await Promotion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatePayload = { ...req.body };
+    delete updatePayload.kind;
+    delete updatePayload.code;
+    delete updatePayload.usedCount;
+
+    const promotion = await Discount.findOneAndUpdate(
+      { _id: req.params.id, kind: PROMOTION_KIND },
+      updatePayload,
+      { new: true, runValidators: true }
+    );
+
     if (!promotion) return res.status(404).json({ success: false, message: 'Not found' });
     res.status(200).json({ success: true, data: promotion });
   } catch (error) {
@@ -41,7 +72,7 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    const promotion = await Promotion.findByIdAndDelete(req.params.id);
+    const promotion = await Discount.findOneAndDelete({ _id: req.params.id, kind: PROMOTION_KIND });
     if (!promotion) return res.status(404).json({ success: false, message: 'Not found' });
     res.status(200).json({ success: true, message: 'Deleted successfully' });
   } catch (error) {

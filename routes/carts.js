@@ -2,7 +2,8 @@ var express = require("express");
 var router = express.Router();
 let { CheckLogin } = require('../utils/authHandler')
 let cartSchema = require('../schemas/carts')
-let variantSchema = require('../schemas/productVariants')
+let productSchema = require('../schemas/products')
+let variantSchema = productSchema.ProductVariant
 
 router.get('/', CheckLogin, async function (req, res, next) {
     let user = req.user;

@@ -1,7 +1,7 @@
 const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
 const roleModel = require('../../schemas/roles');
-const permissionModel = require('../../schemas/permissions');
+const permissionModel = roleModel.Permission;
 
 /**
  * ROLES

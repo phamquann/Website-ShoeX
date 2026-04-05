@@ -12,4 +12,9 @@ router.put('/items/:id', cartController.updateItem);
 router.delete('/items/:id', cartController.removeItem);
 router.delete('/clear', cartController.clearCart);
 
+// Compatibility endpoints
+router.post('/add', cartController.addItem);
+router.post('/decrease', cartController.decreaseItem);
+router.post('/remove', cartController.removeByBody);
+
 module.exports = router;

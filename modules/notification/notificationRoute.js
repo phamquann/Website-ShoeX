@@ -10,6 +10,7 @@ const { authenticate, authorize } = require('../../middlewares/auth');
 
 // User routes
 router.get('/', authenticate, notificationController.getMyNotifications);
+router.get('/stream', authenticate, notificationController.stream);
 router.patch('/read-all', authenticate, notificationController.markAllAsRead);
 router.patch('/:id/read', authenticate, notificationController.markAsRead);
 

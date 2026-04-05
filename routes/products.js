@@ -2,7 +2,7 @@ const express = require('express')
 let router = express.Router()
 let slugify = require('slugify')
 let productSchema = require('../schemas/products')
-let inventorySchema = require('../schemas/inventories')
+let inventorySchema = productSchema.Inventory
 let mongoose = require('mongoose')
 
 router.get('/', async (req, res) => {

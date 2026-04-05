@@ -5,11 +5,11 @@ const slugify = require('slugify');
 // Models
 const roleModel = require('../schemas/roles');
 const userModel = require('../schemas/users');
-const permissionModel = require('../schemas/permissions');
+const permissionModel = roleModel.Permission;
 const brandModel = require('../schemas/brands');
 const categoryModel = require('../schemas/categories');
 const productModel = require('../schemas/products');
-const productVariantModel = require('../schemas/productVariants');
+const productVariantModel = productModel.ProductVariant;
 
 mongoose.connect(config.MONGODB_URI)
   .then(() => console.log('MongoDB Connected for Seeding'))

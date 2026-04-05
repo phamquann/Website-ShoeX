@@ -1,6 +1,27 @@
 const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
-const userAddressModel = require('../../schemas/userAddresses');
+const userModel = require('../../schemas/users');
+
+const sortActiveAddresses = (addresses = []) => {
+  return addresses
+    .filter((address) => !address.isDeleted)
+    .sort((a, b) => {
+      if (a.isDefault !== b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+    });
+};
+
+const getUserAddressesDoc = async (userId) => {
+  return userModel.findById(userId).select('addresses');
+};
+
+const findAddressById = (addresses = [], addressId) => {
+  return addresses.find(
+    (address) => address._id.toString() === addressId && !address.isDeleted
+  ) || null;
+};
 
 /**
  * GET /api/v1/user-addresses
@@ -8,10 +29,10 @@ const userAddressModel = require('../../schemas/userAddresses');
  */
 const getMyAddresses = async (req, res) => {
   try {
-    const addresses = await userAddressModel.find({
-      user: req.user._id,
-      isDeleted: false
-    }).sort({ isDefault: -1, createdAt: -1 });
+    const user = await getUserAddressesDoc(req.user._id);
+    if (!user) return response.notFound(res, 'User not found');
+
+    const addresses = sortActiveAddresses(user.addresses || []);
 
     return response.success(res, addresses, "Addresses retrieved successfully");
   } catch (error) {
@@ -28,30 +49,35 @@ const createAddress = async (req, res) => {
     const { fullName, phone, province, district, ward, addressDetail, isDefault } = req.body;
     const userId = req.user._id;
 
+    const user = await getUserAddressesDoc(userId);
+    if (!user) return response.notFound(res, 'User not found');
+
     // Check if user has no addresses yet, make this one default automatically
-    const count = await userAddressModel.countDocuments({ user: userId, isDeleted: false });
+    const count = (user.addresses || []).filter((address) => !address.isDeleted).length;
     const shouldBeDefault = count === 0 ? true : (isDefault || false);
 
     if (shouldBeDefault && count > 0) {
       // Unset previous default
-      await userAddressModel.updateMany(
-        { user: userId, isDeleted: false },
-        { isDefault: false }
-      );
+      user.addresses.forEach((address) => {
+        if (!address.isDeleted) address.isDefault = false;
+      });
     }
 
-    const newAddress = new userAddressModel({
-      user: userId,
+    user.addresses.push({
       fullName,
       phone,
       province,
       district,
       ward,
       addressDetail,
-      isDefault: shouldBeDefault
+      isDefault: shouldBeDefault,
+      isDeleted: false
     });
 
-    await newAddress.save();
+    const newAddress = user.addresses[user.addresses.length - 1];
+
+    await user.save();
+
     await logAction(req, "CREATE_ADDRESS", "userAddress", newAddress._id);
 
     return response.created(res, newAddress, "Address created successfully");
@@ -70,11 +96,10 @@ const updateAddress = async (req, res) => {
     const addressId = req.params.id;
     const userId = req.user._id;
 
-    const address = await userAddressModel.findOne({
-      _id: addressId,
-      user: userId,
-      isDeleted: false
-    });
+    const user = await getUserAddressesDoc(userId);
+    if (!user) return response.notFound(res, 'User not found');
+
+    const address = findAddressById(user.addresses || [], addressId);
 
     if (!address) {
       return response.notFound(res, "Address not found");
@@ -82,10 +107,9 @@ const updateAddress = async (req, res) => {
 
     if (isDefault && !address.isDefault) {
       // Unset previous default
-      await userAddressModel.updateMany(
-        { user: userId, isDeleted: false },
-        { isDefault: false }
-      );
+      user.addresses.forEach((item) => {
+        if (!item.isDeleted) item.isDefault = false;
+      });
     }
 
     address.fullName = fullName || address.fullName;
@@ -98,7 +122,13 @@ const updateAddress = async (req, res) => {
     // Only allow setting to true, prevent unsetting the only default without providing a new one
     if (isDefault) address.isDefault = true;
 
-    await address.save();
+    const hasDefault = user.addresses.some((item) => !item.isDeleted && item.isDefault);
+    if (!hasDefault) {
+      const firstActive = user.addresses.find((item) => !item.isDeleted);
+      if (firstActive) firstActive.isDefault = true;
+    }
+
+    await user.save();
     await logAction(req, "UPDATE_ADDRESS", "userAddress", address._id);
 
     return response.success(res, address, "Address updated successfully");
@@ -116,31 +146,29 @@ const deleteAddress = async (req, res) => {
     const addressId = req.params.id;
     const userId = req.user._id;
 
-    const address = await userAddressModel.findOne({
-      _id: addressId,
-      user: userId,
-      isDeleted: false
-    });
+    const user = await getUserAddressesDoc(userId);
+    if (!user) return response.notFound(res, 'User not found');
+
+    const address = findAddressById(user.addresses || [], addressId);
 
     if (!address) {
       return response.notFound(res, "Address not found");
     }
 
     address.isDeleted = true;
-    await address.save();
+    address.isDefault = false;
 
     // If it was default, make the most recently modified address the new default
-    if (address.isDefault) {
-      const nextLatest = await userAddressModel.findOne({
-        user: userId,
-        isDeleted: false
-      }).sort({ updatedAt: -1 });
-
-      if (nextLatest) {
-        nextLatest.isDefault = true;
-        await nextLatest.save();
+    const hasDefault = user.addresses.some((item) => !item.isDeleted && item.isDefault);
+    if (!hasDefault) {
+      const activeSorted = sortActiveAddresses(user.addresses || []);
+      if (activeSorted.length > 0) {
+        const target = user.addresses.find((item) => item._id.toString() === activeSorted[0]._id.toString());
+        if (target) target.isDefault = true;
       }
     }
+
+    await user.save();
 
     await logAction(req, "DELETE_ADDRESS", "userAddress", address._id);
 

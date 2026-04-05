@@ -1,5 +1,26 @@
 const response = require('../../middlewares/response');
 const notificationModel = require('../../schemas/notifications');
+const userModel = require('../../schemas/users');
+const { registerClient } = require('../../utils/notificationSse');
+const { notifyUsers, notifyUser } = require('../../utils/notificationHelper');
+
+/**
+ * GET /api/v1/notifications/stream
+ * Register notification SSE stream for current user
+ */
+const stream = async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
+
+  res.write('retry: 10000\n');
+  res.write(`event: connected\ndata: ${JSON.stringify({ connected: true, ts: Date.now() })}\n\n`);
+
+  registerClient(req.user._id, res);
+};
 
 /**
  * GET /api/v1/notifications
@@ -82,27 +103,17 @@ const pushSystemNotification = async (req, res) => {
     }
 
     if (targetUserId === 'all') {
-      const userModel = require('../../schemas/users');
       const allUsers = await userModel.find({ isDeleted: false, status: true }).select('_id');
-      
-      const bulkOps = allUsers.map(user => ({
-        insertOne: {
-          document: { user: user._id, title, message, type: 'system' }
-        }
-      }));
 
-      await notificationModel.bulkWrite(bulkOps);
+      await notifyUsers(
+        allUsers.map((user) => user._id),
+        { title, message, type: 'system' }
+      );
       return response.success(res, null, `Notification pushed to ${allUsers.length} users`);
-      
+
     } else {
-      const newNotif = new notificationModel({
-        user: targetUserId,
-        title,
-        message,
-        type: 'system'
-      });
-      await newNotif.save();
-      return response.success(res, newNotif, "Notification pushed to targeted user");
+      await notifyUser(targetUserId, { title, message, type: 'system' });
+      return response.success(res, null, "Notification pushed to targeted user");
     }
   } catch (error) {
     return response.serverError(res, "Failed to push notification", error);
@@ -110,6 +121,7 @@ const pushSystemNotification = async (req, res) => {
 };
 
 module.exports = {
+  stream,
   getMyNotifications,
   markAsRead,
   markAllAsRead,

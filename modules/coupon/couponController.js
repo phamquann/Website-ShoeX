@@ -1,9 +1,30 @@
-const Coupon = require('../../schemas/coupons');
+const Discount = require('../../schemas/discounts');
+
+const COUPON_KIND = 'coupon';
+
+const toCouponPayload = (input = {}) => ({
+  kind: COUPON_KIND,
+  code: input.code ? String(input.code).toUpperCase().trim() : undefined,
+  description: input.description || '',
+  discountType: input.discountType,
+  discountValue: input.discountValue,
+  minOrderValue: input.minOrderValue ?? 0,
+  maxDiscountAmount: input.maxDiscountAmount ?? null,
+  startDate: input.startDate,
+  endDate: input.endDate,
+  usageLimit: input.usageLimit ?? null,
+  usedCount: input.usedCount ?? 0,
+  isActive: input.isActive ?? true,
+  applicableUsers: Array.isArray(input.applicableUsers) ? input.applicableUsers : []
+});
 
 exports.create = async (req, res) => {
   try {
-    const coupon = new Coupon(req.body);
-    await coupon.save();
+    if (!req.body.code) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required' });
+    }
+
+    const coupon = await Discount.create(toCouponPayload(req.body));
     res.status(201).json({ success: true, data: coupon });
   } catch (error) {
     if (error.code === 11000) {
@@ -15,7 +36,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const coupons = await Coupon.find().sort({ createdAt: -1 });
+    const coupons = await Discount.find({ kind: COUPON_KIND }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: coupons });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -24,7 +45,8 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const coupon = await Coupon.findById(req.params.id);
+    const coupon = await Discount.findOne({ _id: req.params.id, kind: COUPON_KIND });
+
     if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
     res.status(200).json({ success: true, data: coupon });
   } catch (error) {
@@ -34,7 +56,23 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updatePayload = { ...req.body };
+    if (updatePayload.code) {
+      updatePayload.code = String(updatePayload.code).toUpperCase().trim();
+    }
+    delete updatePayload.kind;
+    delete updatePayload.name;
+    delete updatePayload.type;
+    delete updatePayload.applicableProducts;
+    delete updatePayload.applicableCategories;
+    delete updatePayload.applicableBrands;
+
+    const coupon = await Discount.findOneAndUpdate(
+      { _id: req.params.id, kind: COUPON_KIND },
+      updatePayload,
+      { new: true, runValidators: true }
+    );
+
     if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
     res.status(200).json({ success: true, data: coupon });
   } catch (error) {
@@ -44,7 +82,7 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id);
+    const coupon = await Discount.findOneAndDelete({ _id: req.params.id, kind: COUPON_KIND });
     if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
     res.status(200).json({ success: true, message: 'Coupon deleted successfully' });
   } catch (error) {
@@ -57,7 +95,8 @@ exports.checkEligibility = async (req, res) => {
     const { code, orderValue } = req.body;
     const userId = req.user._id;
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
+    const coupon = await Discount.findOne({ kind: COUPON_KIND, code: code.toUpperCase(), isActive: true });
+
     if (!coupon) return res.status(404).json({ success: false, message: 'Invalid or inactive coupon code' });
 
     const now = new Date();
@@ -74,7 +113,8 @@ exports.checkEligibility = async (req, res) => {
     }
 
     if (coupon.applicableUsers && coupon.applicableUsers.length > 0) {
-      if (!coupon.applicableUsers.includes(userId)) {
+      const isEligible = coupon.applicableUsers.some((id) => id.toString() === userId.toString());
+      if (!isEligible) {
         return res.status(400).json({ success: false, message: 'You are not eligible for this coupon' });
       }
     }
