@@ -80,6 +80,44 @@ export const routes: Routes = [
       {
         path: 'orders/:id',
         loadComponent: () => import('./features/orders/order-detail/order-detail.component').then(m => m.OrderDetailComponent)
+      },
+      {
+        path: 'coupons',
+        loadComponent: () => import('./features/coupons/coupon-list/coupon-list.component').then(m => m.CouponListComponent),
+        data: { roles: ['ADMIN', 'STAFF'] }
+      },
+      {
+        path: 'promotions',
+        loadComponent: () => import('./features/promotions/promotion-list/promotion-list.component').then(m => m.PromotionListComponent),
+        data: { roles: ['ADMIN', 'STAFF'] }
+      },
+      {
+        path: 'wishlists',
+        loadComponent: () => import('./features/wishlists/wishlist-list/wishlist-list.component').then(m => m.WishlistListComponent),
+        data: { roles: ['CUSTOMER'] }
+      },
+      {
+        path: 'reviews',
+        loadComponent: () => import('./features/reviews/review-list/review-list.component').then(m => m.ReviewListComponent)
+      },
+      {
+        path: 'shipments',
+        loadComponent: () => import('./features/shipments/shipment-list/shipment-list.component').then(m => m.ShipmentListComponent),
+        data: { roles: ['ADMIN', 'STAFF'] }
+      },
+      {
+        path: 'return-requests',
+        loadComponent: () => import('./features/return-requests/return-request-list/return-request-list.component').then(m => m.ReturnRequestListComponent)
+      },
+      {
+        path: 'refunds',
+        loadComponent: () => import('./features/refunds/refund-list/refund-list.component').then(m => m.RefundListComponent),
+        data: { roles: ['ADMIN', 'STAFF'] }
+      },
+      {
+        path: 'banners',
+        loadComponent: () => import('./features/banners/banner-list/banner-list.component').then(m => m.BannerListComponent),
+        data: { roles: ['ADMIN', 'STAFF'] }
       }
     ]
   },

@@ -1,0 +1,24 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left"> <h2>Sản Phẩm Yêu Thích</h2><p>Bộ sưu tập sản phẩm bạn lưu lại</p> </div>
+  </div>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th width="100">Ảnh</th><th>Sản Phẩm</th><th>Giá hiện tại</th><th>Trạng thái</th><th class="text-right">Hành động</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of products">
+          <td><img *ngIf="item.thumbnail" [src]="item.thumbnail" style="width:60px; height:60px; border-radius:6px; object-fit:cover;"></td>
+          <td><strong>{{ item.name }}</strong></td>
+          <td><strong style="color:var(--primary);">{{ item.salePrice || item.originalPrice | number:'1.0-0' }}đ</strong></td>
+          <td><span class="badge" [ngClass]="item.isActive?'badge-success':'badge-error'">{{item.isActive?'Còn hàng':'Hết hàng'}}</span></td>
+          <td class="text-right">
+            <button class="btn-icon text-error" (click)="remove(item._id)">💔 Bỏ yêu thích</button>
+          </td>
+        </tr>
+        <tr *ngIf="products.length === 0"><td colspan="5" class="text-center py-4">Bạn chưa chọn sản phẩm yêu thích nào.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

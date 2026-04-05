@@ -75,10 +75,19 @@
         </div>
       </div>
 
+      <div class="coupon-section" style="margin: 20px 0; display: flex; gap: 8px;">
+        <input type="text" class="form-control" placeholder="Mã giảm giá" [(ngModel)]="couponCode" style="flex: 1;">
+        <button class="btn btn-outline" (click)="applyCoupon()">Áp dụng</button>
+      </div>
+
       <div class="totals">
         <div class="row"><span>Tổng tiền hàng</span><span>{{ cart.totalAmount | number:'1.0-0' }}đ</span></div>
         <div class="row"><span>Phí vận chuyển</span><span>Miễn phí</span></div>
-        <div class="row grand-total"><span>Tổng cộng</span><span>{{ cart.totalAmount | number:'1.0-0' }}đ</span></div>
+        <div class="row" *ngIf="discountAmount > 0" style="color: var(--primary);">
+          <span>Giảm giá ({{ appliedCoupon }})</span>
+          <span>-{{ discountAmount | number:'1.0-0' }}đ</span>
+        </div>
+        <div class="row grand-total"><span>Tổng cộng</span><span>{{ (cart.totalAmount - discountAmount) > 0 ? (cart.totalAmount - discountAmount) : 0 | number:'1.0-0' }}đ</span></div>
       </div>
 
       <button class="btn btn-primary w-100" 

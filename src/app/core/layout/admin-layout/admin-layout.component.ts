@@ -39,6 +39,24 @@ import { CartService } from '../../services/cart/cart.service';
             <a class="menu-item" routerLink="/products" routerLinkActive="active">
               <i class="icon-product" style="margin-right:8px">👟</i> Products
             </a>
+            <a class="menu-item" routerLink="/coupons" routerLinkActive="active">
+              <i class="icon-coupon" style="margin-right:8px">🎟️</i> Coupons
+            </a>
+            <a class="menu-item" routerLink="/promotions" routerLinkActive="active">
+              <i class="icon-promotion" style="margin-right:8px">🔥</i> Promotions
+            </a>
+            <a class="menu-item" routerLink="/shipments" routerLinkActive="active">
+              <i class="icon-shipment" style="margin-right:8px">🚚</i> Shipments
+            </a>
+            <a class="menu-item" routerLink="/refunds" routerLinkActive="active">
+              <i class="icon-refund" style="margin-right:8px">💸</i> Refunds
+            </a>
+            <a class="menu-item" routerLink="/banners" routerLinkActive="active">
+              <i class="icon-banner" style="margin-right:8px">🖼️</i> Banners
+            </a>
+            <a class="menu-item" routerLink="/return-requests" routerLinkActive="active">
+              <i class="icon-return" style="margin-right:8px">↩️</i> Return Requests
+            </a>
             <a class="menu-item" routerLink="/audit-logs" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
               <i class="icon-audit"></i> Audit Logs
             </a>
@@ -59,6 +77,15 @@ import { CartService } from '../../services/cart/cart.service';
             </a>
             <a class="menu-item" routerLink="/addresses" routerLinkActive="active">
               <i class="icon-address" style="margin-right:8px">🗺️</i> Địa Chỉ Nhận Hàng
+            </a>
+            <a class="menu-item" routerLink="/wishlists" routerLinkActive="active">
+              <i class="icon-wishlist" style="margin-right:8px">❤️</i> Wishlists
+            </a>
+            <a class="menu-item" routerLink="/reviews" routerLinkActive="active">
+              <i class="icon-review" style="margin-right:8px">⭐</i> My Reviews
+            </a>
+            <a class="menu-item" routerLink="/return-requests" routerLinkActive="active">
+              <i class="icon-return" style="margin-right:8px">↩️</i> Return Requests
             </a>
           </ng-container>
 

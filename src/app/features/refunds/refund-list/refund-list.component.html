@@ -1,0 +1,28 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left"> <h2>Refunds</h2><p>Manage customer refunds</p> </div>
+  </div>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>User ID</th><th>Order ID</th><th>Amount</th><th>Method</th><th>Status</th><th class="text-right">Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of refunds">
+          <td>{{ item.user }}</td>
+          <td>{{ item.order?.orderCode || item.order }}</td>
+          <td>{{ item.amount | number }}đ</td>
+          <td>{{ item.method }}</td>
+          <td>
+            <span class="badge" [ngClass]="item.status==='completed'?'badge-success':(item.status==='failed'?'badge-error':'')">{{item.status}}</span>
+          </td>
+          <td class="text-right">
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; margin-right:5px;" *ngIf="item.status==='pending'" (click)="updateStatus(item._id, 'processing')">Process</button>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='processing'" (click)="updateStatus(item._id, 'completed', 'TXN' + (item.amount * 2))">Complete</button>
+          </td>
+        </tr>
+        <tr *ngIf="refunds.length === 0"><td colspan="6" class="text-center py-4">No refunds.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

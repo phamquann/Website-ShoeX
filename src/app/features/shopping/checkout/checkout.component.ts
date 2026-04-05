@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { CartService } from '../../../core/services/cart/cart.service';
 import { CheckoutService } from '../../../core/services/checkout/checkout.service';
 import { AddressService } from '../../../core/services/address/address.service';
+import { CouponService } from '../../../core/services/coupon.service';
 import { v4 as uuidv4 } from 'uuid'; // We might need to map this or just generate a random string
 
 @Component({
@@ -21,6 +22,10 @@ export class CheckoutComponent implements OnInit {
   paymentMethod: string = 'cod';
   note: string = '';
 
+  couponCode: string = '';
+  appliedCoupon: string = '';
+  discountAmount: number = 0;
+
   isLoading = true;
   isProcessing = false;
 
@@ -28,6 +33,7 @@ export class CheckoutComponent implements OnInit {
     private cartService: CartService,
     private checkoutService: CheckoutService,
     private addressService: AddressService,
+    private couponService: CouponService,
     private router: Router
   ) { }
 
@@ -78,6 +84,23 @@ export class CheckoutComponent implements OnInit {
     return 'idemp_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
   }
 
+  applyCoupon() {
+    if (!this.couponCode) return;
+    this.couponService.checkCoupon({ code: this.couponCode, orderValue: this.cart?.totalAmount || 0 }).subscribe({
+      next: (res: any) => {
+        if (res.success) {
+          this.discountAmount = res.data.discountAmount;
+          this.appliedCoupon = this.couponCode;
+        }
+      },
+      error: (err: any) => {
+        alert(err.error?.message || 'Mã giảm giá không hợp lệ');
+        this.discountAmount = 0;
+        this.appliedCoupon = '';
+      }
+    });
+  }
+
   placeOrder() {
     if (!this.selectedAddressId) {
       alert('Please select a shipping address');
@@ -89,6 +112,7 @@ export class CheckoutComponent implements OnInit {
       addressId: this.selectedAddressId,
       paymentMethod: this.paymentMethod,
       note: this.note,
+      couponCode: this.appliedCoupon,
       idempotencyKey: this.generateIdempotencyKey()
     };
 
@@ -102,7 +126,8 @@ export class CheckoutComponent implements OnInit {
         this.isProcessing = false;
       },
       error: (err) => {
-        alert(err.error?.message || 'Thanh toán thất bại');
+        const msg = err.error?.message || err.message || 'Thanh toán thất bại không rõ lý do';
+        alert('Lỗi: ' + msg);
         this.isProcessing = false;
       }
     });
