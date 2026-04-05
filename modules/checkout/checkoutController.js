@@ -7,6 +7,7 @@ const orderModel = require('../../schemas/orders');
 const paymentModel = require('../../schemas/payments');
 const transactionModel = require('../../schemas/transactions');
 const userAddressModel = require('../../schemas/userAddresses');
+const couponModel = require('../../schemas/coupons');
 const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
 const crypto = require('crypto');
@@ -34,7 +35,7 @@ const generateTransactionCode = () => {
  */
 const checkout = async (req, res) => {
   try {
-    const { addressId, paymentMethod = 'cod', note = '', idempotencyKey } = req.body;
+    const { addressId, paymentMethod = 'cod', note = '', idempotencyKey, couponCode } = req.body;
     const userId = req.user._id;
 
     // ===== 1. IDEMPOTENCY CHECK =====
@@ -125,6 +126,44 @@ const checkout = async (req, res) => {
       });
     }
 
+    // ===== 4.5 APPLY COUPON =====
+    let appliedCouponId = null;
+    let discountAmount = 0;
+    const trimmedCoupon = couponCode ? couponCode.toString().trim() : '';
+    if (trimmedCoupon) {
+      const coupon = await couponModel.findOne({ code: trimmedCoupon.toUpperCase(), isActive: true });
+      if (!coupon) return response.badRequest(res, 'Mã giảm giá không hợp lệ hoặc đã bị vô hiệu hóa');
+      
+      const now = new Date();
+      if (now < coupon.startDate || now > coupon.endDate) return response.badRequest(res, 'Mã giảm giá đã hết hạn hoặc chưa được kích hoạt');
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) return response.badRequest(res, 'Mã giảm giá đã hết lượt sử dụng');
+      if (coupon.minOrderValue && totalAmount < coupon.minOrderValue) return response.badRequest(res, `Đơn hàng tối thiểu ${coupon.minOrderValue.toLocaleString()}đ mới được áp dụng mã này`);
+      
+      if (coupon.applicableUsers && coupon.applicableUsers.length > 0) {
+        const isEligible = coupon.applicableUsers.some(u => u.toString() === userId.toString());
+        if (!isEligible) {
+          return response.badRequest(res, 'Bạn không đủ điều kiện sử dụng mã giảm giá này');
+        }
+      }
+
+      if (coupon.discountType === 'fixed') {
+        discountAmount = coupon.discountValue;
+      } else {
+        discountAmount = (totalAmount * coupon.discountValue) / 100;
+        if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+          discountAmount = coupon.maxDiscountAmount;
+        }
+      }
+
+      discountAmount = Math.round(discountAmount);
+      totalAmount = Math.max(0, totalAmount - discountAmount);
+      appliedCouponId = coupon._id;
+
+      // Increment used count
+      coupon.usedCount += 1;
+      await coupon.save();
+    }
+
     // ===== 5. CREATE RESERVATION (giữ hàng) =====
     const reservation = await reservationModel.create({
       user: userId,
@@ -183,6 +222,8 @@ const checkout = async (req, res) => {
       },
       status: 'pending',
       totalAmount,
+      coupon: appliedCouponId,
+      discountAmount,
       reservation: reservation._id,
       idempotencyKey,
       note
@@ -258,7 +299,8 @@ const checkout = async (req, res) => {
       transactionCode: txnCode
     }, 'Checkout successful! Order created.');
   } catch (error) {
-    return response.serverError(res, 'Checkout failed', error);
+    console.error('[CHECKOUT ERROR]', error.message, error.stack);
+    return response.serverError(res, `Checkout failed: ${error.message}`, error);
   }
 };
 

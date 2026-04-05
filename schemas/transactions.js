@@ -19,7 +19,8 @@ const transactionSchema = new mongoose.Schema({
   transactionCode: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    sparse: true
   },
   type: {
     type: String,
@@ -60,6 +61,5 @@ const transactionSchema = new mongoose.Schema({
 
 transactionSchema.index({ payment: 1 });
 transactionSchema.index({ order: 1 });
-transactionSchema.index({ transactionCode: 1 });
 
 module.exports = mongoose.model('transaction', transactionSchema);

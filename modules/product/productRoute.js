@@ -5,6 +5,7 @@ const { authenticate, authorize } = require('../../middlewares/auth');
 const { validate, mongoIdRules } = require('../../middlewares/validator');
 const { body } = require('express-validator');
 const uploadMiddleware = require('../../middlewares/upload');
+const reviewController = require('../review/reviewController');
 
 const productCreateRules = [
   body('name').trim().notEmpty().withMessage('Product name is required'),
@@ -18,6 +19,10 @@ const productCreateRules = [
 router.get('/', productController.getAll);
 router.get('/slug/:slug', productController.getBySlug);
 router.get('/:id', mongoIdRules(), validate, productController.getById);
+
+// ===== REVIEWS =====
+router.get('/:id/reviews', reviewController.getByProduct);
+router.post('/:id/reviews', authenticate, reviewController.createForProduct);
 
 // ===== PROTECTED - CRUD =====
 router.post('/', authenticate, authorize('ADMIN', 'STAFF'), productCreateRules, validate, productController.create);

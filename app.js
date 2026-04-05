@@ -48,6 +48,14 @@ app.use('/api/v1/product-variants', require('./modules/productVariant/productVar
 app.use('/api/v1/carts', require('./modules/cart/cartRoute'));
 app.use('/api/v1/checkout', require('./modules/checkout/checkoutRoute'));
 app.use('/api/v1/orders', require('./modules/order/orderRoute'));
+app.use('/api/v1/coupons', require('./modules/coupon/couponRoute'));
+app.use('/api/v1/promotions', require('./modules/promotion/promotionRoute'));
+app.use('/api/v1/wishlists', require('./modules/wishlist/wishlistRoute'));
+app.use('/api/v1/reviews', require('./modules/review/reviewRoute'));
+app.use('/api/v1/shipments', require('./modules/shipment/shipmentRoute'));
+app.use('/api/v1/return-requests', require('./modules/returnRequest/returnRequestRoute'));
+app.use('/api/v1/refunds', require('./modules/refund/refundRoute'));
+app.use('/api/v1/banners', require('./modules/banner/bannerRoute'));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

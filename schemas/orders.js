@@ -11,7 +11,8 @@ const orderSchema = new mongoose.Schema({
   orderCode: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    sparse: true
   },
   items: {
     type: [orderItemSchema],
@@ -20,6 +21,15 @@ const orderSchema = new mongoose.Schema({
   shippingAddress: {
     type: shippingAddressSchema,
     required: true
+  },
+  coupon: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'coupon'
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0
   },
   status: {
     type: String,
