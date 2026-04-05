@@ -1,0 +1,90 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="title-section">
+      <h1>Quản Lý Người Dùng</h1>
+      <p>Tra cứu và cấu hình quyền truy cập hệ thống.</p>
+    </div>
+    <div class="actions">
+      <button class="btn-primary">+ Thêm User Mới</button>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="icon-search">🔍</i>
+        <input 
+          type="text" 
+          placeholder="Tìm user theo tên, email, SDT..." 
+          [(ngModel)]="keyword" 
+          (keyup.enter)="onSearch()"
+        >
+      </div>
+      <button class="btn-secondary" (click)="onSearch()">Tìm kiếm</button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email / SĐT</th>
+            <th>Role</th>
+            <th>Trạng thái</th>
+            <th class="text-right">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="isLoading">
+            <td colspan="5" class="text-center loading-state">
+              <div class="spinner"></div> Đang tải dữ liệu...
+            </td>
+          </tr>
+          <tr *ngIf="!isLoading && users.length === 0">
+            <td colspan="5" class="text-center empty-state">Không tìm thấy người dùng nào.</td>
+          </tr>
+          <tr *ngFor="let user of users" [class.row-locked]="!user.status">
+            <td>
+              <div class="user-info">
+                <div class="avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
+                <div class="details">
+                  <span class="name">{{ user.username }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="contact-info">
+                <span class="email">{{ user.email }}</span>
+                <span class="phone" *ngIf="user.phoneNumber">{{ user.phoneNumber }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge role">{{ user.role?.name || 'Customer' }}</span>
+            </td>
+            <td>
+              <span class="badge status" [class.active]="user.status" [class.inactive]="!user.status">
+                {{ user.status ? 'Đang hoạt động' : 'Tài khoản khóa' }}
+              </span>
+            </td>
+            <td class="actions text-right">
+              <button class="action-btn edit" title="Chỉnh sửa">✏️</button>
+              <button class="action-btn toggle" (click)="toggleStatus(user._id)" [title]="user.status ? 'Khóa' : 'Mở khóa'">
+                {{ user.status ? '🔒' : '🔓' }}
+              </button>
+              <button class="action-btn delete" (click)="deleteUser(user._id)" title="Xóa">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-footer" *ngIf="totalPages > 1">
+      <span class="page-info">Trang {{ currentPage }} / {{ totalPages }}</span>
+      <div class="pager">
+        <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">Trang trước</button>
+        <button [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">Trang tiếp</button>
+      </div>
+    </div>
+  </div>
+</div>

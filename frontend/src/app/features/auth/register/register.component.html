@@ -1,0 +1,73 @@
+<div class="login-container">
+  <div class="glass-panel">
+    <div class="brand">
+      <div class="logo"></div>
+      <h2>Đăng Ký Tài Khoản</h2>
+      <p>Tham gia hệ thống ShoeX Admin</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="login-form">
+      
+      <div class="form-group">
+        <label for="username">Tên người dùng (Username)</label>
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            id="username" 
+            formControlName="username" 
+            placeholder="vd: nguyenvana"
+            autocomplete="off"
+            [class.invalid]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Địa chỉ Email</label>
+        <div class="input-wrapper">
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email" 
+            placeholder="vd: a@example.com"
+            autocomplete="off"
+            [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mật Khẩu</label>
+        <div class="input-wrapper">
+          <input 
+            type="password" 
+            id="password" 
+            formControlName="password" 
+            placeholder="Nhập mật khẩu..."
+            [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
+        </div>
+      </div>
+
+      <div class="error-box" *ngIf="errorMsg">
+        {{ errorMsg }}
+      </div>
+
+      <div class="success-box" *ngIf="successMsg">
+        {{ successMsg }}
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="registerForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Đăng Ký</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+    </form>
+    
+    <div class="footer-links">
+      <a routerLink="/login">Đã có tài khoản? Quay lại đăng nhập</a>
+    </div>
+  </div>
+
+  <div class="bg-circles">
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2" style="background: #10b981;"></div>
+    <div class="circle circle-3"></div>
+  </div>
+</div>
