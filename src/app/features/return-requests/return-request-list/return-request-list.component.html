@@ -1,0 +1,29 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left"> <h2>Return Requests</h2><p>Manage customer return requests</p> </div>
+  </div>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>User ID</th><th>Order ID</th><th>Reason</th><th>Status</th><th>Date</th><th class="text-right">Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of requests">
+          <td>{{ item.user }}</td>
+          <td>{{ item.order?.orderCode || item.order }}</td>
+          <td>{{ item.reason }}</td>
+          <td>
+            <span class="badge" [ngClass]="item.status==='approved'?'badge-success':(item.status==='rejected'?'badge-error':'')">{{item.status}}</span>
+          </td>
+          <td>{{ item.createdAt | date:'short' }}</td>
+          <td class="text-right">
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; margin-right:5px;" *ngIf="item.status==='pending'" (click)="changeStatus(item._id, 'approved')">Approve</button>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; color:red;" *ngIf="item.status==='pending'" (click)="changeStatus(item._id, 'rejected')">Reject</button>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='approved'" (click)="changeStatus(item._id, 'completed')">Complete</button>
+          </td>
+        </tr>
+        <tr *ngIf="requests.length === 0"><td colspan="6" class="text-center py-4">No return requests.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

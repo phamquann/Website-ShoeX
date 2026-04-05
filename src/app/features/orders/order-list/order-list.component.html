@@ -1,0 +1,78 @@
+<div class="orders-container">
+  <div class="header">
+    <h2>{{ isAdmin ? 'Manage Orders' : 'My Orders' }}</h2>
+  </div>
+
+  <div class="filters">
+    <div class="search-box" *ngIf="isAdmin">
+      <input type="text" placeholder="Search by Order Code..." [(ngModel)]="searchQuery" (keyup.enter)="onFilterChange()">
+      <button (click)="onFilterChange()">🔍</button>
+    </div>
+    
+    <select class="status-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="shipping">Shipping</option>
+      <option value="delivered">Delivered</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading orders...</div>
+
+  <div class="empty-state" *ngIf="!isLoading && orders.length === 0">
+    <p>No orders found.</p>
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading && orders.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>Order Code</th>
+          <th *ngIf="isAdmin">Customer</th>
+          <th>Date</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td><strong>{{ order.orderCode }}</strong></td>
+          <td *ngIf="isAdmin">{{ order.user?.fullName }} ({{ order.user?.phone }})</td>
+          <td>{{ order.createdAt | date:'short' }}</td>
+          <td>{{ order.totalAmount | number:'1.0-0' }}đ</td>
+          <td>
+            <span class="pay-method">{{ order.payment?.method === 'cod' ? 'COD' : 'ONLINE' }}</span>
+            <span class="pay-status" [class.success]="order.payment?.status === 'paid'">{{ order.payment?.status }}</span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(order.status)">{{ order.status | uppercase }}</span>
+          </td>
+          <td>
+            <a [routerLink]="['/orders', order._id]" class="btn-sm btn-outline">View Details</a>
+            
+            <div class="admin-actions" *ngIf="isAdmin && order.status !== 'cancelled' && order.status !== 'delivered'">
+               <select #statusSelect (change)="updateStatus(order, statusSelect.value)" class="action-select">
+                 <option value="" disabled selected>Update...</option>
+                 <option value="confirmed" *ngIf="order.status === 'pending'">Confirm</option>
+                 <option value="shipping" *ngIf="order.status === 'confirmed'">Ship</option>
+                 <option value="delivered" *ngIf="order.status === 'shipping'">Deliver</option>
+                 <option value="cancelled">Cancel</option>
+               </select>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="meta.totalPages > 1">
+      <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">Previous</button>
+      <span>Page {{ currentPage }} of {{ meta.totalPages }}</span>
+      <button [disabled]="currentPage === meta.totalPages" (click)="changePage(currentPage + 1)">Next</button>
+    </div>
+  </div>
+</div>
