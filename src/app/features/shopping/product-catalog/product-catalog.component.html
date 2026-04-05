@@ -1,0 +1,121 @@
+<div class="catalog-container">
+  <div class="catalog-header">
+    <div class="header-main">
+      <h2>Danh Mục Sản Phẩm</h2>
+      <a routerLink="/cart" class="view-cart-btn">🛒 Giỏ Hàng</a>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <div class="search-box">
+        <input type="text" placeholder="Tìm tên sản phẩm..." [(ngModel)]="filter.search" (keyup.enter)="applyFilters()">
+        <button class="btn btn-primary" (click)="applyFilters()">🔍</button>
+      </div>
+
+      <div class="filter-controls">
+        <select class="form-control" [(ngModel)]="filter.brand" (change)="applyFilters()">
+          <option value="">-- Thương hiệu --</option>
+          <option *ngFor="let b of brands" [value]="b._id">{{ b.name }}</option>
+        </select>
+
+        <select class="form-control" [(ngModel)]="filter.category" (change)="applyFilters()">
+          <option value="">-- Danh mục --</option>
+          <option *ngFor="let c of categories" [value]="c._id">{{ c.name }}</option>
+        </select>
+
+        <select class="form-control" [(ngModel)]="filter.sort" (change)="applyFilters()">
+          <option value="-createdAt">Mới nhất</option>
+          <option value="createdAt">Cũ nhất</option>
+          <option value="salePrice">Giá tăng dần</option>
+          <option value="-salePrice">Giá giảm dần</option>
+        </select>
+
+        <button class="btn btn-secondary" (click)="clearFilters()">Xóa Lọc</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading products...</div>
+
+  <div class="product-grid" *ngIf="!isLoading">
+    <div class="product-card" *ngFor="let product of products" [routerLink]="['/products-catalog', product._id]">
+      <div class="img-container">
+        <img [src]="product.thumbnail" [alt]="product.name" />
+        <button class="wishlist-btn" (click)="addToWishlist(product._id, $event)">❤️</button>
+        <span class="brand-badge" *ngIf="product.brand">{{ product.brand.name }}</span>
+      </div>
+      <div class="card-body">
+        <h3>{{ product.name }}</h3>
+        <p class="category">{{ product.category?.name }}</p>
+        <div class="price-row">
+          <div class="price-group">
+            <span class="price">{{ product.salePrice | number:'1.0-0' }}đ</span>
+            <span class="old-price" *ngIf="product.salePrice < product.originalPrice">{{ product.originalPrice | number:'1.0-0' }}đ</span>
+          </div>
+          <button class="view-detail" [routerLink]="['/products-catalog', product._id]" (click)="$event.stopPropagation()">
+            Xem chi tiết
+          </button>
+          <button class="quick-add" (click)="openProductModal(product); $event.stopPropagation()">
+            🛒
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Cart Modal -->
+  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Add to Cart</h3>
+        <button class="close-btn" (click)="closeModal()">×</button>
+      </div>
+      
+      <div class="modal-body" *ngIf="selectedProduct">
+        <div class="product-preview">
+          <img [src]="selectedProduct.thumbnail" alt="" />
+          <div>
+            <h4>{{ selectedProduct.name }}</h4>
+            <p class="price">{{ selectedProduct.salePrice | number:'1.0-0' }}đ</p>
+          </div>
+        </div>
+
+        <div class="form-group mt-3" *ngIf="selectedProduct.variants?.length > 0">
+          <label>Select Size & Color</label>
+          <div class="variants-grid">
+            <label class="variant-box" 
+                   *ngFor="let v of selectedProduct.variants" 
+                   [class.selected]="selectedVariantId === v._id"
+                   [class.disabled]="(v.stock - v.reserved) <= 0">
+              <input type="radio" name="variant" [value]="v._id" [(ngModel)]="selectedVariantId" [disabled]="(v.stock - v.reserved) <= 0">
+              <span class="color-dot" [style.background]="v.color.hexCode"></span>
+              <div class="v-info">
+                <strong>Size {{ v.size }}</strong>
+                <small>{{ v.color.name }}</small>
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group mt-3" *ngIf="!selectedProduct.variants?.length">
+          <p style="color:var(--error)">No variants available for this product.</p>
+        </div>
+
+        <div class="form-group" *ngIf="selectedVariantId">
+          <label>Quantity (Available: {{ getAvailableStock(selectedVariantId) }})</label>
+          <input type="number" class="form-control" [(ngModel)]="quantity" min="1" [max]="getAvailableStock(selectedVariantId)">
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn btn-primary" 
+                [disabled]="!selectedVariantId || quantity < 1 || quantity > getAvailableStock(selectedVariantId) || isAdding"
+                (click)="addToCart()">
+          {{ isAdding ? 'Adding...' : 'Add to Cart' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
