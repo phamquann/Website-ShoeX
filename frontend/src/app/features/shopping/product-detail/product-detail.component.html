@@ -1,0 +1,182 @@
+<div class="product-detail-page">
+  <button class="back-btn" (click)="goBackToCatalog()">← Quay lại danh mục</button>
+
+  <div *ngIf="isLoading" class="loading-state">Đang tải thông tin sản phẩm...</div>
+
+  <div *ngIf="!isLoading && !product" class="empty-state">
+    <h2>Không tìm thấy sản phẩm</h2>
+    <p>Sản phẩm có thể đã bị gỡ hoặc không còn hiển thị.</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading && product">
+    <section class="product-card">
+      <div class="media-column">
+        <div class="main-image" *ngIf="selectedImage; else noImage">
+          <img [src]="selectedImage" [alt]="product.name" />
+        </div>
+        <ng-template #noImage>
+          <div class="main-image placeholder">Không có hình ảnh</div>
+        </ng-template>
+
+        <div class="thumb-row" *ngIf="productImages.length > 1">
+          <button
+            class="thumb"
+            *ngFor="let image of productImages"
+            [class.active]="selectedImage === image"
+            (click)="selectImage(image)">
+            <img [src]="image" [alt]="product.name" />
+          </button>
+        </div>
+      </div>
+
+      <div class="content-column">
+        <div class="chip-row">
+          <span class="chip" *ngIf="product.brand">{{ product.brand.name }}</span>
+          <span class="chip subtle" *ngIf="product.category">{{ product.category.name }}</span>
+        </div>
+
+        <h1>{{ product.name }}</h1>
+
+        <div class="rating-row">
+          <span class="stars">
+            <ng-container *ngFor="let _ of getStars(reviewSummary.averageRating)">★</ng-container>
+          </span>
+          <strong>{{ reviewSummary.averageRating | number:'1.1-1' }}</strong>
+          <span>({{ reviewSummary.totalReviews }} đánh giá)</span>
+        </div>
+
+        <div class="price-row">
+          <span class="price">{{ getCurrentPrice() | number:'1.0-0' }}đ</span>
+          <span class="old-price" *ngIf="product.originalPrice > getCurrentPrice()">{{ product.originalPrice | number:'1.0-0' }}đ</span>
+        </div>
+
+        <p class="description">{{ product.description || 'Sản phẩm hiện chưa có mô tả chi tiết.' }}</p>
+
+        <div class="variant-section" *ngIf="product.variants?.length; else noVariant">
+          <h3>Chọn size và màu</h3>
+          <div class="variant-grid">
+            <button
+              class="variant-item"
+              *ngFor="let variant of product.variants"
+              [class.active]="selectedVariantId === variant._id"
+              [class.out-stock]="isVariantDisabled(variant)"
+              [disabled]="isVariantDisabled(variant)"
+              (click)="selectVariant(variant._id)">
+              <span class="color-dot" [style.background]="variant.color?.hexCode || '#111827'"></span>
+              <div class="variant-copy">
+                <strong>Size {{ variant.size }} · {{ variant.color?.name || 'Màu mặc định' }}</strong>
+                <small *ngIf="!isVariantDisabled(variant)">Còn {{ getVariantAvailableStock(variant) }} sản phẩm</small>
+                <small *ngIf="isVariantDisabled(variant)">Hết hàng</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <ng-template #noVariant>
+          <div class="warning-box">Sản phẩm hiện chưa có biến thể để mua.</div>
+        </ng-template>
+
+        <div class="buy-row">
+          <div class="qty-group">
+            <label>Số lượng</label>
+            <input
+              type="number"
+              [(ngModel)]="quantity"
+              min="1"
+              [max]="getSelectedVariantAvailableStock()"
+              (change)="onVariantChanged()" />
+          </div>
+
+          <button
+            class="add-cart-btn"
+            [disabled]="!selectedVariantId || getSelectedVariantAvailableStock() <= 0 || quantity < 1 || quantity > getSelectedVariantAvailableStock() || isAdding"
+            (click)="addToCart()">
+            {{ isAdding ? 'Đang thêm...' : 'Thêm vào giỏ hàng' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="review-card">
+      <div class="review-top">
+        <div>
+          <h2>Đánh giá sản phẩm</h2>
+          <p>Tổng hợp từ khách hàng đã mua hàng</p>
+        </div>
+
+        <div class="summary-box">
+          <strong>{{ reviewSummary.averageRating | number:'1.1-1' }}</strong>
+          <span>/ 5</span>
+          <small>{{ reviewSummary.totalReviews }} lượt đánh giá</small>
+        </div>
+      </div>
+
+      <div class="breakdown-list">
+        <div class="breakdown-row" *ngFor="let star of [5,4,3,2,1]">
+          <span class="label">{{ star }} sao</span>
+          <div class="bar">
+            <div class="fill" [style.width.%]="getBreakdownPercent(star)"></div>
+          </div>
+          <span class="count">{{ getBreakdownCount(star) }}</span>
+        </div>
+      </div>
+
+      <div class="review-filters">
+        <select [(ngModel)]="reviewFilter.star" (change)="applyReviewFilters()">
+          <option [ngValue]="''">Tất cả số sao</option>
+          <option [ngValue]="5">5 sao</option>
+          <option [ngValue]="4">4 sao</option>
+          <option [ngValue]="3">3 sao</option>
+          <option [ngValue]="2">2 sao</option>
+          <option [ngValue]="1">1 sao</option>
+        </select>
+
+        <select [(ngModel)]="reviewFilter.hasImages" (change)="applyReviewFilters()">
+          <option value="">Tất cả đánh giá</option>
+          <option value="true">Chỉ đánh giá có ảnh</option>
+          <option value="false">Không có ảnh</option>
+        </select>
+      </div>
+
+      <div *ngIf="isReviewLoading" class="loading-state small">Đang tải đánh giá...</div>
+
+      <div class="review-list" *ngIf="!isReviewLoading">
+        <article class="review-item" *ngFor="let review of reviews">
+          <div class="review-head">
+            <div class="avatar" [class.empty]="!review?.user?.avatarUrl">
+              <img *ngIf="review?.user?.avatarUrl" [src]="review.user.avatarUrl" [alt]="getDisplayName(review)">
+              <span *ngIf="!review?.user?.avatarUrl">{{ getUserInitial(review) }}</span>
+            </div>
+
+            <div class="review-meta">
+              <strong>{{ getDisplayName(review) }}</strong>
+              <div class="sub-row">
+                <span class="stars">
+                  <ng-container *ngFor="let _ of getStars(review.rating)">★</ng-container>
+                </span>
+                <span>{{ getReviewDate(review) | date:'short' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="comment" *ngIf="review.comment">{{ review.comment }}</p>
+
+          <div class="image-grid" *ngIf="review.images?.length">
+            <img *ngFor="let image of review.images" [src]="image" alt="review-image" />
+          </div>
+        </article>
+
+        <div class="empty-state small" *ngIf="reviews.length === 0">
+          <h3>Chưa có đánh giá phù hợp</h3>
+          <p>Hãy thử thay đổi bộ lọc để xem thêm đánh giá.</p>
+        </div>
+      </div>
+
+      <div class="pagination" *ngIf="reviewMeta.totalPages > 1">
+        <button (click)="changeReviewPage(reviewFilter.page - 1)" [disabled]="reviewFilter.page <= 1">Trước</button>
+        <span>Trang {{ reviewFilter.page }} / {{ reviewMeta.totalPages }}</span>
+        <button (click)="changeReviewPage(reviewFilter.page + 1)" [disabled]="reviewFilter.page >= reviewMeta.totalPages">Sau</button>
+      </div>
+    </section>
+  </ng-container>
+</div>

@@ -6,7 +6,7 @@ let path = require('path')
 let fs = require('fs')
 let mongoose = require('mongoose');
 let productModel = require('../schemas/products')
-let inventoryModel = require('../schemas/inventories')
+let inventoryModel = productModel.Inventory
 let categoryModel = require('../schemas/categories')
 let slugify = require('slugify')
 
