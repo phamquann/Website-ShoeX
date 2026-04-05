@@ -1,7 +1,55 @@
 <div class="page-container">
   <div class="page-header">
-    <div class="header-left"> <h2>Đánh giá của tôi</h2><p>Quản lý các sản phẩm bạn đã đánh giá</p> </div>
+    <div class="header-left">
+      <h2>Đánh giá sản phẩm</h2>
+      <p>Nhập đánh giá cho đơn đã xác nhận nhận hàng và quản lý đánh giá của bạn</p>
+    </div>
   </div>
+
+  <div class="table-container mb-20">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Sản phẩm chưa đánh giá</th>
+          <th>Mã đơn</th>
+          <th>Số lượng</th>
+          <th>Giá</th>
+          <th class="text-right">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="isLoadingReviewable">
+          <td colspan="5" class="text-center py-4">Đang tải danh sách chờ đánh giá...</td>
+        </tr>
+
+        <tr *ngFor="let item of reviewableItems">
+          <td>
+            <div class="product-cell">
+              <a [routerLink]="['/products-catalog', item.productId]" title="Xem chi tiết sản phẩm">
+                <img *ngIf="item.thumbnail" [src]="item.thumbnail" class="thumb" alt="product">
+              </a>
+              <div>
+                <a [routerLink]="['/products-catalog', item.productId]" class="product-link">
+                  <strong>{{ item.productName }}</strong>
+                </a>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge">{{ item.orderCode }}</span></td>
+          <td>{{ item.quantity }}</td>
+          <td><strong style="color:var(--primary)">{{ item.price | number:'1.0-0' }}đ</strong></td>
+          <td class="text-right">
+            <button class="btn btn-primary" (click)="openCreate(item)">Đánh giá ngay</button>
+          </td>
+        </tr>
+
+        <tr *ngIf="!isLoadingReviewable && reviewableItems.length === 0">
+          <td colspan="5" class="text-center py-4">Hiện không có sản phẩm nào cần đánh giá.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <div class="table-container">
     <table class="data-table">
       <thead>
@@ -10,14 +58,21 @@
       <tbody>
         <tr *ngFor="let item of reviews">
           <td>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <img *ngIf="item.product?.thumbnail" [src]="item.product.thumbnail" style="width:40px; height:40px; border-radius:4px;">
+            <div class="product-cell">
+              <a *ngIf="item.product?._id" [routerLink]="['/products-catalog', item.product._id]">
+                <img *ngIf="item.product?.thumbnail" [src]="item.product.thumbnail" class="thumb" alt="product">
+              </a>
               <strong>{{ item.product?.name || 'Sản phẩm đã xóa' }}</strong>
             </div>
           </td>
-          <td><span style="color:#fbbf24;">{{ '⭐'.repeat(item.rating) }}</span> ({{ item.rating }})</td>
+          <td>
+            <span style="color:#fbbf24;">
+              <ng-container *ngFor="let _ of getStars(item.rating)">⭐</ng-container>
+            </span>
+            ({{ item.rating }})
+          </td>
           <td>{{ item.comment }}</td>
-          <td>{{ item.createdAt | date:'short' }}</td>
+          <td>{{ getReviewDate(item) | date:'short' }}</td>
           <td class="text-right">
             <button class="btn-icon text-primary" (click)="openEdit(item)">✏️</button>
             <button class="btn-icon text-error" (click)="deleteItem(item._id)">🗑️</button>
@@ -36,5 +91,61 @@
       <div class="form-group"><label>Nội dung</label><textarea class="form-control" [(ngModel)]="form.comment" rows="3"></textarea></div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" (click)="closeModal()">Hủy</button><button class="btn btn-primary" (click)="save()">Lưu</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Đánh giá sản phẩm</h3>
+      <button class="btn-close" (click)="closeCreateModal()">✕</button>
+    </div>
+
+    <div class="modal-body" style="display:grid; gap:16px;">
+      <div *ngIf="selectedTarget" class="target-box">
+        <img *ngIf="selectedTarget.thumbnail" [src]="selectedTarget.thumbnail" class="thumb" alt="product">
+        <div>
+          <strong>{{ selectedTarget.productName }}</strong>
+          <p>Mã đơn: {{ selectedTarget.orderCode }}</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Số sao</label>
+        <div class="star-picker">
+          <button
+            type="button"
+            class="star-btn"
+            *ngFor="let star of [1,2,3,4,5]"
+            [class.active]="createForm.rating >= star"
+            (click)="createForm.rating = star">
+            ★
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nội dung đánh giá (tùy chọn)</label>
+        <textarea class="form-control" [(ngModel)]="createForm.comment" rows="4" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Ảnh đính kèm (tối đa 5 ảnh)</label>
+        <input class="form-control" type="file" accept="image/*" multiple (change)="onSelectFiles($event)">
+        <div class="preview-grid" *ngIf="previewUrls.length > 0">
+          <div class="preview-item" *ngFor="let url of previewUrls; let i = index">
+            <img [src]="url" alt="preview-image">
+            <button type="button" class="remove-btn" (click)="removeSelectedFile(i)">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="closeCreateModal()">Hủy</button>
+      <button class="btn btn-primary" [disabled]="isCreating" (click)="submitCreate()">
+        {{ isCreating ? 'Đang gửi...' : 'Gửi đánh giá' }}
+      </button>
+    </div>
   </div>
 </div>

@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NotificationService } from '../../services/notification/notification.service';
 import { CartService } from '../../services/cart/cart.service';
 
@@ -11,7 +11,6 @@ import { CartService } from '../../services/cart/cart.service';
   template: `
     <div class="admin-wrapper">
       <aside class="sidebar">
-        <!-- Sidebar content same as before -->
         <div class="sidebar-header">
           <div class="logo"></div>
           <h2>ShoeX</h2>
@@ -21,7 +20,6 @@ import { CartService } from '../../services/cart/cart.service';
             <i class="icon-dashboard"></i> Dashboard
           </a>
 
-          <!-- ADMIN / STAFF ONLY -->
           <ng-container *ngIf="userRole === 'ADMIN' || userRole === 'STAFF'">
             <div class="menu-label">QUẢN TRỊ</div>
             <a class="menu-item" routerLink="/users" routerLinkActive="active">
@@ -34,7 +32,7 @@ import { CartService } from '../../services/cart/cart.service';
               <i class="icon-brand" style="margin-right:8px">🏷️</i> Brands
             </a>
             <a class="menu-item" routerLink="/categories" routerLinkActive="active">
-              <i class="icon-category" style="margin-right:8px">📂</i> Categories
+              <i class="icon-category" style="margin-right:8px">📁</i> Categories
             </a>
             <a class="menu-item" routerLink="/products" routerLinkActive="active">
               <i class="icon-product" style="margin-right:8px">👟</i> Products
@@ -48,14 +46,8 @@ import { CartService } from '../../services/cart/cart.service';
             <a class="menu-item" routerLink="/shipments" routerLinkActive="active">
               <i class="icon-shipment" style="margin-right:8px">🚚</i> Shipments
             </a>
-            <a class="menu-item" routerLink="/refunds" routerLinkActive="active">
-              <i class="icon-refund" style="margin-right:8px">💸</i> Refunds
-            </a>
-            <a class="menu-item" routerLink="/banners" routerLinkActive="active">
-              <i class="icon-banner" style="margin-right:8px">🖼️</i> Banners
-            </a>
             <a class="menu-item" routerLink="/return-requests" routerLinkActive="active">
-              <i class="icon-return" style="margin-right:8px">↩️</i> Return Requests
+              <i class="icon-return" style="margin-right:8px">↩️</i> Return / Refund
             </a>
             <a class="menu-item" routerLink="/audit-logs" routerLinkActive="active" *ngIf="userRole === 'ADMIN'">
               <i class="icon-audit"></i> Audit Logs
@@ -65,7 +57,6 @@ import { CartService } from '../../services/cart/cart.service';
             </a>
           </ng-container>
 
-          <!-- CUSTOMER ONLY -->
           <ng-container *ngIf="userRole === 'CUSTOMER'">
             <div class="menu-label">MUA SẮM</div>
             <a class="menu-item" routerLink="/products-catalog" routerLinkActive="active">
@@ -85,7 +76,7 @@ import { CartService } from '../../services/cart/cart.service';
               <i class="icon-review" style="margin-right:8px">⭐</i> My Reviews
             </a>
             <a class="menu-item" routerLink="/return-requests" routerLinkActive="active">
-              <i class="icon-return" style="margin-right:8px">↩️</i> Return Requests
+              <i class="icon-return" style="margin-right:8px">↩️</i> Return / Refund
             </a>
           </ng-container>
 
@@ -107,13 +98,12 @@ import { CartService } from '../../services/cart/cart.service';
             <span class="role-badge" *ngIf="userRole">{{ userRole }}</span>
           </div>
           <div class="topbar-actions">
-            
             <div class="notification-container">
               <button class="btn-icon" (click)="toggleNotifications()">
                 🔔
                 <span class="badge-count" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
               </button>
-              
+
               <div class="notification-dropdown" *ngIf="showNotifications">
                 <div class="notif-header">
                   <h4>Thông báo</h4>
@@ -136,7 +126,6 @@ import { CartService } from '../../services/cart/cart.service';
             <div class="avatar" [style.backgroundImage]="'url(' + (avatarUrl || 'http://localhost:3000/uploads/default-avatar.png') + ')'" [style.backgroundSize]="'cover'" [style.backgroundPosition]="'center'" (click)="goToProfile()" title="Hồ sơ cá nhân">
               <span *ngIf="!avatarUrl">{{ userName.charAt(0).toUpperCase() }}</span>
             </div>
-            
           </div>
         </header>
 
@@ -147,12 +136,11 @@ import { CartService } from '../../services/cart/cart.service';
     </div>
   `,
   styles: [`
-    /* Previous styles... */
     .admin-wrapper { display: flex; height: 100vh; background: var(--bg-dark); overflow: hidden; }
     .sidebar { width: 260px; background: var(--surface-dark); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
     .sidebar-header { padding: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .sidebar-header .logo { width: 32px; height: 32px; background: linear-gradient(135deg, #4f46e5, #8b5cf6); border-radius: 8px; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); }
-    .sidebar-header h2 { font-size: 20px; font-weight: 700; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+    .sidebar-header h2 { font-size: 20px; font-weight: 700; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .sidebar-menu { padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
     .sidebar-menu .menu-item { padding: 12px 16px; border-radius: 12px; color: var(--text-secondary); text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; font-size: 15px; }
     .sidebar-menu .menu-item:hover, .sidebar-menu .menu-item.active { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
@@ -170,8 +158,7 @@ import { CartService } from '../../services/cart/cart.service';
     .topbar .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #8b5cf6); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
     .topbar .avatar:hover { border-color: var(--primary); }
     .content-area { padding: 32px; flex: 1; overflow-y: auto; }
-    
-    /* Notification styling */
+
     .notification-container { position: relative; }
     .badge-count { position: absolute; top: -5px; right: -5px; background: var(--error); color: white; border-radius: 10px; font-size: 10px; padding: 2px 6px; font-weight: bold; }
     .notification-dropdown { position: absolute; top: 40px; right: -60px; width: 320px; background: var(--surface-dark); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; overflow: hidden; animation: floatUp 0.2s; }
@@ -191,7 +178,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   userRole: string = '';
   userName: string = 'User';
   avatarUrl: string = '';
-  
+
   notifications: any[] = [];
   unreadCount: number = 0;
   showNotifications = false;
@@ -201,7 +188,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   private pollingInterval: any;
 
   constructor(
-    private router: Router, 
+    private router: Router,
     private notificationService: NotificationService,
     private cartService: CartService
   ) {}
@@ -209,11 +196,9 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadUserData();
     this.loadNotifications();
-    this.cartService.getMyCart().subscribe(); // Initial fetch
-    
-    // Listen for storage changes if profile gets updated
+    this.cartService.getMyCart().subscribe();
+
     window.addEventListener('storage', () => this.loadUserData());
-    // Fallback: poll every 10s to reflect layout changes fast
     this.pollingInterval = setInterval(() => this.loadUserData(), 10000);
   }
 
@@ -222,7 +207,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
       clearInterval(this.pollingInterval);
     }
   }
-  
+
   loadUserData() {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -231,15 +216,15 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         this.userRole = user.role?.name || '';
         this.userName = user.fullName || user.username || 'User';
         this.avatarUrl = user.avatarUrl || '';
-        
+
         if (this.userRole === 'CUSTOMER' && (this.router.url === '/dashboard' || this.router.url === '/')) {
           this.router.navigate(['/products-catalog']);
         }
 
         if (this.router.url.includes('/users') && this.userRole !== 'ADMIN' && this.userRole !== 'STAFF') {
-           this.router.navigate(['/dashboard']);
+          this.router.navigate(['/dashboard']);
         }
-      } catch(e) {}
+      } catch (e) {}
     } else {
       this.router.navigate(['/login']);
     }
@@ -247,13 +232,13 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   loadNotifications() {
     this.notificationService.getNotifications().subscribe((res: any) => {
-      if(res.success) {
+      if (res.success) {
         this.notifications = res.data;
         this.calculateUnread();
       }
     });
   }
-  
+
   calculateUnread() {
     this.unreadCount = this.notifications.filter(n => !n.isRead).length;
   }
@@ -268,9 +253,9 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   markAsRead(id: string) {
     this.notificationService.markAsRead(id).subscribe((res: any) => {
-      if(res.success) {
+      if (res.success) {
         const notif = this.notifications.find(n => n._id === id);
-        if(notif) notif.isRead = true;
+        if (notif) notif.isRead = true;
         this.calculateUnread();
       }
     });
@@ -279,7 +264,6 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   markAllAsRead() {
     this.notifications.forEach(n => n.isRead = true);
     this.unreadCount = 0;
-    // Just visual update, assuming there is a backend endpoint or ignoring it for now
   }
 
   logout() {

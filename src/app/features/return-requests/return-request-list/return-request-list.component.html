@@ -1,29 +1,265 @@
-<div class="page-container">
+<div class="returns-page">
   <div class="page-header">
-    <div class="header-left"> <h2>Return Requests</h2><p>Manage customer return requests</p> </div>
+    <div>
+      <h2>{{ isAdmin ? 'Return / Refund Center' : 'My Return Requests' }}</h2>
+      <p>
+        {{ isAdmin
+          ? 'Xem chi tiet yeu cau khach gui, duyet hoan hang va xu ly hoan tien trong mot man hinh.'
+          : 'Theo doi trang thai hoan hang, thong tin phan hoi va tien trinh hoan tien cua ban.' }}
+      </p>
+    </div>
   </div>
-  <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr><th>User ID</th><th>Order ID</th><th>Reason</th><th>Status</th><th>Date</th><th class="text-right">Actions</th></tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of requests">
-          <td>{{ item.user }}</td>
-          <td>{{ item.order?.orderCode || item.order }}</td>
-          <td>{{ item.reason }}</td>
-          <td>
-            <span class="badge" [ngClass]="item.status==='approved'?'badge-success':(item.status==='rejected'?'badge-error':'')">{{item.status}}</span>
-          </td>
-          <td>{{ item.createdAt | date:'short' }}</td>
-          <td class="text-right">
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; margin-right:5px;" *ngIf="item.status==='pending'" (click)="changeStatus(item._id, 'approved')">Approve</button>
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; color:red;" *ngIf="item.status==='pending'" (click)="changeStatus(item._id, 'rejected')">Reject</button>
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='approved'" (click)="changeStatus(item._id, 'completed')">Complete</button>
-          </td>
-        </tr>
-        <tr *ngIf="requests.length === 0"><td colspan="6" class="text-center py-4">No return requests.</td></tr>
-      </tbody>
-    </table>
+
+  <div class="loading-state" *ngIf="isLoading">Dang tai du lieu hoan hang...</div>
+
+  <div class="empty-state" *ngIf="!isLoading && requests.length === 0">
+    <h3>Chua co yeu cau nao</h3>
+    <p>{{ isAdmin ? 'Khi khach gui yeu cau hoan hang, thong tin se hien tai day.' : 'Ban chua gui yeu cau hoan hang nao.' }}</p>
+  </div>
+
+  <div class="request-list" *ngIf="!isLoading && requests.length > 0">
+    <article class="request-card" *ngFor="let item of requests">
+      <div class="card-head">
+        <div class="head-copy">
+          <span class="eyebrow">{{ isAdmin ? getUserName(item) : 'Don hang cua ban' }}</span>
+          <h3>{{ item.order?.orderCode || item.order }}</h3>
+          <p>
+            {{ getReasonLabel(item.reason) }} · Gui luc {{ item.createdAt | date:'short' }}
+          </p>
+        </div>
+
+        <div class="status-stack">
+          <span class="status-pill" [ngClass]="getRequestStatusClass(item.status)">
+            {{ getRequestStatusLabel(item.status) }}
+          </span>
+          <span class="status-pill refund" *ngIf="item.refund" [ngClass]="getRefundStatusClass(item.refund.status)">
+            {{ getRefundStatusLabel(item.refund.status) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <label>Khach hang</label>
+          <strong>{{ getUserName(item) }}</strong>
+          <p>{{ getUserContact(item) }}</p>
+        </div>
+
+        <div class="summary-card">
+          <label>So tien yeu cau</label>
+          <strong>{{ item.requestedAmount | number:'1.0-0' }}đ</strong>
+          <p>{{ getRefundMethodLabel(item.refundMethod) }}</p>
+        </div>
+
+        <div class="summary-card">
+          <label>Thanh toan</label>
+          <strong>{{ getPaymentMethodLabel(item.order?.payment?.method) }}</strong>
+          <p>{{ item.order?.payment?.status || 'Chua co trang thai' }}</p>
+        </div>
+
+        <div class="summary-card">
+          <label>San pham</label>
+          <strong>{{ item.order?.items?.length || 0 }} mon</strong>
+          <p>{{ item.order?.totalAmount | number:'1.0-0' }}đ</p>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <section class="detail-panel">
+          <div class="panel-head">
+            <h4>Khach da gui gi</h4>
+          </div>
+
+          <div class="detail-row">
+            <label>Ly do</label>
+            <div>
+              <strong>{{ getReasonLabel(item.reason) }}</strong>
+              <p>{{ item.description || 'Khach chua bo sung mo ta chi tiet.' }}</p>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <label>Thong tin lien he</label>
+            <div>
+              <strong>{{ item.contactPhone || getUserContact(item) }}</strong>
+              <p>{{ getRefundMethodLabel(item.refundMethod) }}</p>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <label>Thong tin nhan tien</label>
+            <div>
+              <strong *ngIf="item.refundMethod === 'bank_transfer'; else cashRefund">
+                {{ item.refundBankName || 'Chua co ngan hang' }} · {{ item.refundAccountName || 'Chua co ten tai khoan' }}
+              </strong>
+              <ng-template #cashRefund>
+                <strong>Nhan tien mat</strong>
+              </ng-template>
+              <p *ngIf="item.refundMethod === 'bank_transfer'">
+                {{ item.refundAccountNumber || 'Chua co so tai khoan' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="detail-row image-row" *ngIf="item.images?.length">
+            <label>Hinh anh</label>
+            <div class="image-grid">
+              <a *ngFor="let image of item.images" [href]="image" target="_blank" rel="noreferrer">
+                <img [src]="image" alt="return-evidence">
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-panel">
+          <div class="panel-head">
+            <h4>Don hang lien quan</h4>
+            <a class="view-order-link" [routerLink]="['/orders', item.order?._id]" *ngIf="item.order?._id">Xem don</a>
+          </div>
+
+          <div class="detail-row">
+            <label>Nguoi nhan</label>
+            <div>
+              <strong>{{ item.order?.shippingAddress?.fullName || 'Chua co ten nguoi nhan' }}</strong>
+              <p>{{ item.order?.shippingAddress?.phone || 'Chua co so dien thoai' }}</p>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <label>Dia chi giao hang</label>
+            <div>
+              <strong>{{ getShippingAddress(item.order) }}</strong>
+              <p>{{ item.order?.note || 'Khong co ghi chu giao hang.' }}</p>
+            </div>
+          </div>
+
+          <div class="order-items">
+            <div class="order-item" *ngFor="let product of item.order?.items">
+              <img [src]="product.thumbnail" [alt]="product.productName">
+              <div class="item-copy">
+                <strong>{{ product.productName }}</strong>
+                <p>{{ getVariantSummary(product) }}</p>
+                <span>x{{ product.quantity }}</span>
+              </div>
+              <div class="item-price">{{ product.subtotal | number:'1.0-0' }}đ</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="detail-panel action-panel" *ngIf="isAdmin">
+        <div class="panel-head">
+          <h4>Xet duyet yeu cau</h4>
+          <span class="muted-copy" *ngIf="item.reviewedAt">
+            {{ item.reviewedAt | date:'short' }} · {{ item.reviewedBy?.fullName || item.reviewedBy?.username || 'Da xu ly' }}
+          </span>
+        </div>
+
+        <textarea
+          [(ngModel)]="reviewNotes[item._id]"
+          [disabled]="item.status !== 'pending' || isActionBusy(item._id)"
+          placeholder="Nhap ghi chu cho khach hang. Neu tu choi thi nen ghi ro ly do."></textarea>
+
+        <div class="button-row" *ngIf="item.status === 'pending'">
+          <button class="btn primary" [disabled]="isActionBusy(item._id)" (click)="reviewRequest(item, 'approved')">
+            Chap nhan
+          </button>
+          <button class="btn danger" [disabled]="isActionBusy(item._id)" (click)="reviewRequest(item, 'rejected')">
+            Tu choi
+          </button>
+        </div>
+
+        <div class="admin-feedback" *ngIf="item.adminNote">
+          <label>Phan hoi da gui</label>
+          <p>{{ item.adminNote }}</p>
+        </div>
+      </section>
+
+      <section class="detail-panel action-panel" *ngIf="isAdmin && item.refund">
+        <div class="panel-head">
+          <h4>Tien trinh hoan tien</h4>
+          <span class="muted-copy" *ngIf="item.refund.processedAt">
+            Hoan tat luc {{ item.refund.processedAt | date:'short' }}
+          </span>
+        </div>
+
+        <div class="refund-grid">
+          <div class="refund-field">
+            <label>Trang thai refund</label>
+            <strong>{{ getRefundStatusLabel(item.refund.status) }}</strong>
+          </div>
+          <div class="refund-field">
+            <label>So tien</label>
+            <strong>{{ item.refund.amount | number:'1.0-0' }}đ</strong>
+          </div>
+        </div>
+
+        <input
+          type="text"
+          [(ngModel)]="refundTransactionIds[item.refund._id]"
+          [disabled]="item.refund.status === 'completed' || isActionBusy(item.refund._id)"
+          placeholder="Nhap ma giao dich hoan tien khi da chuyen khoan">
+
+        <textarea
+          [(ngModel)]="refundNotes[item.refund._id]"
+          [disabled]="item.refund.status === 'completed' || isActionBusy(item.refund._id)"
+          placeholder="Nhap ghi chu xu ly refund, vi du dang doi ngan hang xu ly hay ly do that bai."></textarea>
+
+        <div class="button-row">
+          <button
+            class="btn secondary"
+            *ngIf="item.refund.status === 'pending'"
+            [disabled]="isActionBusy(item.refund._id)"
+            (click)="updateRefundStatus(item, 'processing')">
+            Dang xu ly
+          </button>
+          <button
+            class="btn primary"
+            *ngIf="item.refund.status === 'processing'"
+            [disabled]="isActionBusy(item.refund._id)"
+            (click)="updateRefundStatus(item, 'completed')">
+            Hoan tat
+          </button>
+          <button
+            class="btn danger"
+            *ngIf="item.refund.status === 'pending' || item.refund.status === 'processing'"
+            [disabled]="isActionBusy(item.refund._id)"
+            (click)="updateRefundStatus(item, 'failed')">
+            Bao loi
+          </button>
+        </div>
+
+        <div class="admin-feedback" *ngIf="item.refund.adminNote || item.refund.transactionId">
+          <label>Cap nhat refund</label>
+          <p *ngIf="item.refund.adminNote">{{ item.refund.adminNote }}</p>
+          <p *ngIf="item.refund.transactionId">Ma giao dich: {{ item.refund.transactionId }}</p>
+        </div>
+      </section>
+
+      <section class="detail-panel action-panel" *ngIf="!isAdmin">
+        <div class="panel-head">
+          <h4>Phan hoi tu shop</h4>
+        </div>
+
+        <div class="customer-feedback">
+          <div>
+            <label>Trang thai yeu cau</label>
+            <strong>{{ getRequestStatusLabel(item.status) }}</strong>
+          </div>
+          <div *ngIf="item.refund">
+            <label>Trang thai hoan tien</label>
+            <strong>{{ getRefundStatusLabel(item.refund.status) }}</strong>
+          </div>
+          <div *ngIf="item.adminNote">
+            <label>Ghi chu tu shop</label>
+            <p>{{ item.adminNote }}</p>
+          </div>
+          <div *ngIf="item.refund?.transactionId">
+            <label>Ma giao dich hoan tien</label>
+            <p>{{ item.refund.transactionId }}</p>
+          </div>
+        </div>
+      </section>
+    </article>
   </div>
 </div>

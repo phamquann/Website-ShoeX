@@ -10,8 +10,8 @@
       <tbody>
         <tr *ngFor="let item of shipments">
           <td><strong>{{ item.order?.orderCode || item.order }}</strong></td>
-          <td>{{ item.shippingProvider }}</td>
-          <td><span class="badge">{{ item.trackingNumber }}</span></td>
+          <td>{{ item.shippingProvider || 'Not assigned' }}</td>
+          <td><span class="badge">{{ item.trackingNumber || 'Pending' }}</span></td>
           <td>{{ item.status }}</td>
           <td class="text-right">
             <button class="btn-icon text-primary" (click)="openEdit(item)">✏️ Update</button>

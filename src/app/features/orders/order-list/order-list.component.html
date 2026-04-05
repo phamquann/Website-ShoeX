@@ -15,6 +15,7 @@
       <option value="confirmed">Confirmed</option>
       <option value="shipping">Shipping</option>
       <option value="delivered">Delivered</option>
+      <option value="completed">Completed</option>
       <option value="cancelled">Cancelled</option>
     </select>
   </div>
@@ -53,8 +54,28 @@
           </td>
           <td>
             <a [routerLink]="['/orders', order._id]" class="btn-sm btn-outline">View Details</a>
+            <button
+              *ngIf="!isAdmin && order.status === 'delivered'"
+              class="btn-sm btn-review"
+              [disabled]="completingOrderId === order._id"
+              (click)="confirmReceived(order)">
+              {{ completingOrderId === order._id ? 'Đang xác nhận...' : 'Đã nhận hàng' }}
+            </button>
+            <a
+              *ngIf="!isAdmin && order.status === 'completed'"
+              routerLink="/reviews"
+              class="btn-sm btn-review">
+              Đánh giá sản phẩm
+            </a>
+            <a
+              *ngIf="!isAdmin && (order.status === 'delivered' || order.status === 'completed')"
+              [routerLink]="['/orders', order._id]"
+              [queryParams]="{ action: 'return' }"
+              class="btn-sm btn-accent">
+              Return / Refund
+            </a>
             
-            <div class="admin-actions" *ngIf="isAdmin && order.status !== 'cancelled' && order.status !== 'delivered'">
+            <div class="admin-actions" *ngIf="isAdmin && order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'completed'">
                <select #statusSelect (change)="updateStatus(order, statusSelect.value)" class="action-select">
                  <option value="" disabled selected>Update...</option>
                  <option value="confirmed" *ngIf="order.status === 'pending'">Confirm</option>

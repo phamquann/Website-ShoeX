@@ -1,92 +1,311 @@
 <div class="order-detail-container">
-  <div class="header">
-    <a routerLink="/orders" class="back-link">← Back to Orders</a>
-    <h2>Order Details</h2>
+  <div class="detail-header">
+    <div>
+      <a routerLink="/orders" class="back-link">← Back to orders</a>
+      <h1>Theo doi don hang</h1>
+      <p *ngIf="order">Ma don {{ order.orderCode }} · {{ order.createdAt | date:'short' }}</p>
+    </div>
+
+    <div class="header-actions" *ngIf="order">
+      <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+        {{ getStatusLabel(order.status) }}
+      </span>
+      <button class="primary-btn" *ngIf="canConfirmReceived()" [disabled]="isConfirmingReceived" (click)="confirmReceived()">
+        {{ isConfirmingReceived ? 'Đang xác nhận...' : 'Đã nhận hàng' }}
+      </button>
+      <a class="secondary-btn" *ngIf="canReviewOrder()" routerLink="/reviews">
+        Đánh giá sản phẩm
+      </a>
+      <button class="primary-btn" *ngIf="canCreateReturnRequest()" (click)="openReturnRequestModal()">
+        Hoan hang / Hoan tien
+      </button>
+    </div>
   </div>
 
-  <div *ngIf="isLoading" class="loading">Loading details...</div>
+  <div *ngIf="isLoading" class="loading-state">Dang tai thong tin don hang...</div>
 
-  <div *ngIf="!isLoading && orderData" class="detail-grid">
-    
-    <!-- LEFT -->
-    <div class="left-col">
-      <div class="section-card">
-        <div class="card-header">
-          <h3>Order #{{ orderData.order.orderCode }}</h3>
-          <span class="status-badge" [ngClass]="getStatusClass(orderData.order.status)">
-            {{ orderData.order.status | uppercase }}
-          </span>
+  <ng-container *ngIf="!isLoading && order">
+    <section class="tracking-card">
+      <div class="tracking-header">
+        <div>
+          <h2>Hanh trinh don hang</h2>
+          <p>Cap nhat theo trang thai thuc te cua don hang va shipment</p>
         </div>
-        <p class="date">Placed on {{ orderData.order.createdAt | date:'medium' }}</p>
+        <div class="eta-pill">
+          <span>⏱</span>
+          <strong *ngIf="returnRequest && returnRequest.status === 'pending'">Phan hoi hoan tien 1-3 ngay</strong>
+          <strong *ngIf="!returnRequest || returnRequest.status !== 'pending'">{{ getShipmentStatusLabel(shipment?.status) }}</strong>
+        </div>
+      </div>
 
-        <div class="items-list">
-          <div class="order-item" *ngFor="let item of orderData.order.items">
-            <img [src]="item.thumbnail" alt="Product" />
-            <div class="item-info">
-              <h4>{{ item.productName }}</h4>
-              <p>Size: {{ item.variantInfo.size }} | Color: {{ item.variantInfo.color }}</p>
-              <div class="pricing">
-                <span>{{ item.price | number:'1.0-0' }}đ × {{ item.quantity }}</span>
+      <div class="tracking-steps">
+        <div class="tracking-step" *ngFor="let step of trackingSteps; let i = index">
+          <div class="step-line" *ngIf="i < trackingSteps.length - 1" [class.done]="step.completed"></div>
+          <div class="step-node" [class.completed]="step.completed" [class.active]="step.active">
+            {{ step.completed ? '✓' : i + 1 }}
+          </div>
+          <div class="step-copy">
+            <strong>{{ step.label }}</strong>
+            <span>{{ step.description }}</span>
+            <small>{{ step.time ? (step.time | date:'HH:mm · dd/MM/yyyy') : 'Dang cho cap nhat' }}</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <div class="main-column">
+        <section class="info-card">
+          <div class="card-title">
+            <h3>Thong tin giao hang</h3>
+            <span class="mini-badge">{{ getShipmentStatusLabel(shipment?.status) }}</span>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Don vi van chuyen</label>
+              <strong>{{ shipment?.shippingProvider || 'Dang cap nhat' }}</strong>
+            </div>
+            <div class="info-item">
+              <label>Ma van don</label>
+              <strong>{{ shipment?.trackingNumber || 'Chua co ma van don' }}</strong>
+            </div>
+            <div class="info-item">
+              <label>Dia chi giao hang</label>
+              <strong>{{ order.shippingAddress.fullName }} · {{ order.shippingAddress.phone }}</strong>
+              <p>{{ order.shippingAddress.addressDetail }}, {{ order.shippingAddress.ward }}, {{ order.shippingAddress.district }}, {{ order.shippingAddress.province }}</p>
+            </div>
+            <div class="info-item">
+              <label>Ghi chu</label>
+              <p>{{ order.note || 'Khong co ghi chu bo sung' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="info-card">
+          <div class="card-title">
+            <h3>Chi tiet don hang</h3>
+            <span class="mini-badge">{{ order.items.length }} san pham</span>
+          </div>
+
+          <div class="order-items">
+            <div class="order-item" *ngFor="let item of order.items">
+              <a [routerLink]="['/products-catalog', item.product?._id || item.product]" title="Xem chi tiết sản phẩm">
+                <img [src]="item.thumbnail" [alt]="item.productName">
+              </a>
+              <div class="item-copy">
+                <h4>
+                  <a [routerLink]="['/products-catalog', item.product?._id || item.product]" style="color:inherit; text-decoration:none;">
+                    {{ item.productName }}
+                  </a>
+                </h4>
+                <p>Size {{ item.variantInfo.size }} · Mau {{ item.variantInfo.color }}</p>
+                <span>SKU: {{ item.variantInfo.sku }}</span>
+              </div>
+              <div class="item-pricing">
                 <strong>{{ item.subtotal | number:'1.0-0' }}đ</strong>
+                <small>{{ item.price | number:'1.0-0' }}đ × {{ item.quantity }}</small>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div class="totals-section">
-          <div class="row"><span>Subtotal:</span> <span>{{ orderData.order.totalAmount | number:'1.0-0' }}đ</span></div>
-          <div class="row"><span>Shipping:</span> <span>Free</span></div>
-          <div class="row grand-total"><span>Total:</span> <span>{{ orderData.order.totalAmount | number:'1.0-0' }}đ</span></div>
-        </div>
+        </section>
+
+        <section class="info-card" *ngIf="orderData.transactions?.length">
+          <div class="card-title">
+            <h3>Lich su giao dich</h3>
+            <span class="mini-badge">{{ orderData.transactions.length }} moc</span>
+          </div>
+
+          <div class="transaction-list">
+            <div class="transaction-item" *ngFor="let transaction of orderData.transactions">
+              <div class="transaction-dot"></div>
+              <div class="transaction-copy">
+                <strong>{{ transaction.type | uppercase }} · {{ transaction.status | uppercase }}</strong>
+                <p>{{ transaction.description || 'Khong co mo ta' }}</p>
+                <small>{{ transaction.createdAt | date:'short' }}</small>
+              </div>
+              <div class="transaction-amount" [class.refund]="transaction.type === 'refund'">
+                {{ transaction.amount | number:'1.0-0' }}đ
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <div class="section-card mt-4" *ngIf="orderData.order.cancelReason">
-        <h3 class="text-danger">Cancellation Reason</h3>
-        <p>{{ orderData.order.cancelReason }}</p>
-        <small>Cancelled at: {{ orderData.order.cancelledAt | date:'medium' }}</small>
+      <aside class="side-column">
+        <section class="summary-card">
+          <h3>Tong don hang</h3>
+          <div class="summary-row">
+            <span>Tam tinh</span>
+            <strong>{{ getSubtotal() | number:'1.0-0' }}đ</strong>
+          </div>
+          <div class="summary-row" *ngIf="order.discountAmount > 0">
+            <span>Giam gia</span>
+            <strong>-{{ order.discountAmount | number:'1.0-0' }}đ</strong>
+          </div>
+          <div class="summary-row">
+            <span>Phi giao hang</span>
+            <strong>{{ order.shippingFee | number:'1.0-0' }}đ</strong>
+          </div>
+          <div class="summary-row total">
+            <span>Tong cong</span>
+            <strong>{{ order.totalAmount | number:'1.0-0' }}đ</strong>
+          </div>
+
+          <div class="summary-meta">
+            <div>
+              <label>Thanh toan</label>
+              <strong>{{ getPaymentMethodLabel(order.payment?.method) }}</strong>
+              <p>{{ order.payment?.status ? (order.payment.status | uppercase) : 'PENDING' }}</p>
+            </div>
+            <div>
+              <label>Dat hang luc</label>
+              <strong>{{ order.createdAt | date:'shortTime' }}</strong>
+              <p>{{ order.createdAt | date:'fullDate' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="summary-card refund-card">
+          <div class="card-title">
+            <h3>Hoan hang / Hoan tien</h3>
+            <span class="mini-badge" *ngIf="returnRequest">{{ getReturnStatusLabel(returnRequest.status) }}</span>
+            <span class="mini-badge" *ngIf="!returnRequest">Chua gui yeu cau</span>
+          </div>
+
+          <div *ngIf="!returnRequest">
+            <p class="muted-text" *ngIf="canCreateReturnRequest()">
+              Neu san pham nhan duoc khong vua y, ban co the gui yeu cau hoan hang. Admin se phan hoi trong 1-3 ngay.
+            </p>
+            <p class="muted-text" *ngIf="!canCreateReturnRequest()">
+              Yeu cau hoan hang chi kha dung sau khi don hang da giao thanh cong.
+            </p>
+          </div>
+
+          <div class="request-detail" *ngIf="returnRequest">
+            <div class="detail-line">
+              <label>Ly do</label>
+              <strong>{{ getReturnReasonLabel(returnRequest.reason) }}</strong>
+            </div>
+            <div class="detail-line" *ngIf="returnRequest.description">
+              <label>Mo ta</label>
+              <p>{{ returnRequest.description }}</p>
+            </div>
+            <div class="detail-line">
+              <label>Thong tin nhan tien</label>
+              <strong>{{ returnRequest.refundMethod === 'bank_transfer' ? 'Chuyen khoan' : 'Tien mat' }}</strong>
+              <p *ngIf="returnRequest.refundBankName">{{ returnRequest.refundBankName }} · {{ returnRequest.refundAccountName }}</p>
+              <p *ngIf="returnRequest.refundAccountNumber">{{ returnRequest.refundAccountNumber }}</p>
+            </div>
+            <div class="detail-line">
+              <label>So tien yeu cau</label>
+              <strong>{{ returnRequest.requestedAmount | number:'1.0-0' }}đ</strong>
+            </div>
+            <div class="detail-line" *ngIf="returnRequest.adminNote">
+              <label>Phan hoi tu admin</label>
+              <p>{{ returnRequest.adminNote }}</p>
+            </div>
+            <div class="detail-line" *ngIf="refund">
+              <label>Trang thai hoan tien</label>
+              <strong>{{ getRefundStatusLabel(refund.status) }}</strong>
+              <p *ngIf="refund.transactionId">Ma giao dich: {{ refund.transactionId }}</p>
+              <p *ngIf="refund.adminNote">{{ refund.adminNote }}</p>
+            </div>
+            <div class="detail-line" *ngIf="returnRequest.images?.length">
+              <label>Hinh anh dinh kem</label>
+              <div class="image-grid">
+                <img *ngFor="let image of returnRequest.images" [src]="image" alt="return-image">
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </ng-container>
+</div>
+
+<div class="modal-backdrop" *ngIf="showReturnModal" (click)="closeReturnRequestModal()">
+  <div class="return-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Gui yeu cau hoan hang</h3>
+        <p>Admin se phan hoi trong 1-3 ngay lam viec</p>
       </div>
+      <button class="icon-btn" (click)="closeReturnRequestModal()">✕</button>
     </div>
 
-    <!-- RIGHT -->
-    <div class="right-col">
-      <div class="section-card">
-        <h3>Shipping Details</h3>
-        <div class="info-block">
-          <strong>{{ orderData.order.shippingAddress.fullName }}</strong>
-          <p>{{ orderData.order.shippingAddress.phone }}</p>
-          <p>{{ orderData.order.shippingAddress.addressDetail }}</p>
-          <p>{{ orderData.order.shippingAddress.ward }}, {{ orderData.order.shippingAddress.district }}, {{ orderData.order.shippingAddress.province }}</p>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Ly do</label>
+        <select [(ngModel)]="returnForm.reason">
+          <option value="wrong_size">Khong vua kich thuoc</option>
+          <option value="wrong_item">Giao sai san pham</option>
+          <option value="damaged_item">San pham loi / hong</option>
+          <option value="not_as_expected">Khong giong mo ta</option>
+          <option value="other">Ly do khac</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Mo ta chi tiet</label>
+        <textarea [(ngModel)]="returnForm.description" rows="4" placeholder="Mo ta tinh trang san pham va ly do ban muon hoan hang"></textarea>
+      </div>
+
+      <div class="double-grid">
+        <div class="form-group">
+          <label>So dien thoai lien he</label>
+          <input type="text" [(ngModel)]="returnForm.contactPhone" placeholder="0947xxxxxx">
         </div>
-        <div class="info-block mt-3" *ngIf="orderData.order.note">
-          <strong>Notes:</strong>
-          <p>{{ orderData.order.note }}</p>
+        <div class="form-group">
+          <label>So tien de nghi hoan</label>
+          <input type="number" [(ngModel)]="returnForm.requestedAmount" [max]="order?.totalAmount || 0">
         </div>
       </div>
 
-      <div class="section-card mt-4">
-        <h3>Payment Information</h3>
-        <div class="info-block">
-          <p>Method: <strong>{{ orderData.order.payment?.method === 'cod' ? 'Cash on Delivery (COD)' : 'Online Payment' }}</strong></p>
-          <p>Status: <strong [class.text-success]="orderData.order.payment?.status === 'paid'">{{ orderData.order.payment?.status | uppercase }}</strong></p>
+      <div class="form-group">
+        <label>Phuong thuc nhan tien</label>
+        <select [(ngModel)]="returnForm.refundMethod">
+          <option value="bank_transfer">Chuyen khoan ngan hang</option>
+          <option value="cash">Tien mat</option>
+        </select>
+      </div>
+
+      <div class="double-grid" *ngIf="returnForm.refundMethod === 'bank_transfer'">
+        <div class="form-group">
+          <label>Ngan hang</label>
+          <input type="text" [(ngModel)]="returnForm.refundBankName" placeholder="Vietcombank">
+        </div>
+        <div class="form-group">
+          <label>Chu tai khoan</label>
+          <input type="text" [(ngModel)]="returnForm.refundAccountName" placeholder="Pham Van A">
         </div>
       </div>
-      
-      <div class="section-card mt-4" *ngIf="orderData.transactions && orderData.transactions.length > 0">
-        <h3>Transaction History</h3>
-        <div class="timeline">
-          <div class="t-item" *ngFor="let t of orderData.transactions">
-            <div class="t-dot"></div>
-            <div class="t-content">
-              <strong>{{ t.type | uppercase }} - {{ t.status | uppercase }}</strong>
-              <small>{{ t.createdAt | date:'short' }}</small>
-              <p>{{ t.description }}</p>
-              <span class="t-amount" *ngIf="t.type === 'payment'">+{{ t.amount | number:'1.0-0' }}đ</span>
-              <span class="t-amount refund" *ngIf="t.type === 'refund'">-{{ t.amount | number:'1.0-0' }}đ</span>
-            </div>
+
+      <div class="form-group" *ngIf="returnForm.refundMethod === 'bank_transfer'">
+        <label>So tai khoan</label>
+        <input type="text" [(ngModel)]="returnForm.refundAccountNumber" placeholder="0123456789">
+      </div>
+
+      <div class="form-group">
+        <label>Hinh anh minh chung</label>
+        <div class="upload-panel">
+          <input type="file" multiple accept="image/*" (change)="onReturnImagesSelected($event)">
+          <span *ngIf="isUploadingImages">Dang tai anh len...</span>
+        </div>
+        <div class="image-grid editable" *ngIf="uploadedImages.length">
+          <div class="image-item" *ngFor="let image of uploadedImages; let index = index">
+            <img [src]="image" alt="uploaded-image">
+            <button type="button" class="remove-image" (click)="removeImage(index)">×</button>
           </div>
         </div>
       </div>
     </div>
 
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeReturnRequestModal()">Dong</button>
+      <button class="primary-btn" [disabled]="isSubmittingReturn" (click)="submitReturnRequest()">
+        {{ isSubmittingReturn ? 'Dang gui...' : 'Gui yeu cau' }}
+      </button>
+    </div>
   </div>
 </div>

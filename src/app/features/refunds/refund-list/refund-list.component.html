@@ -5,20 +5,35 @@
   <div class="table-container">
     <table class="data-table">
       <thead>
-        <tr><th>User ID</th><th>Order ID</th><th>Amount</th><th>Method</th><th>Status</th><th class="text-right">Actions</th></tr>
+        <tr><th>Customer</th><th>Order ID</th><th>Amount</th><th>Refund Info</th><th>Status</th><th class="text-right">Actions</th></tr>
       </thead>
       <tbody>
         <tr *ngFor="let item of refunds">
-          <td>{{ item.user }}</td>
+          <td>
+            <strong>{{ item.user?.fullName || item.user?.username || item.user }}</strong>
+            <div style="color:var(--text-secondary); font-size:12px;">{{ item.user?.phone || item.user?.email || 'No contact info' }}</div>
+          </td>
           <td>{{ item.order?.orderCode || item.order }}</td>
-          <td>{{ item.amount | number }}đ</td>
-          <td>{{ item.method }}</td>
+          <td>{{ item.amount | number:'1.0-0' }}đ</td>
+          <td>
+            <div><strong>{{ item.method }}</strong></div>
+            <div style="color:var(--text-secondary); font-size:12px;" *ngIf="item.returnRequest?.refundBankName">
+              {{ item.returnRequest?.refundBankName }} · {{ item.returnRequest?.refundAccountName }}
+            </div>
+            <div style="color:var(--text-secondary); font-size:12px;" *ngIf="item.transactionId">
+              {{ item.transactionId }}
+            </div>
+          </td>
           <td>
             <span class="badge" [ngClass]="item.status==='completed'?'badge-success':(item.status==='failed'?'badge-error':'')">{{item.status}}</span>
+            <div style="color:var(--text-secondary); font-size:12px; margin-top:6px;" *ngIf="item.adminNote">{{ item.adminNote }}</div>
           </td>
           <td class="text-right">
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; margin-right:5px;" *ngIf="item.status==='pending'" (click)="updateStatus(item._id, 'processing')">Process</button>
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='processing'" (click)="updateStatus(item._id, 'completed', 'TXN' + (item.amount * 2))">Complete</button>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='pending'" (click)="updateStatus(item, 'processing')">Process</button>
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" *ngIf="item.status==='processing'" (click)="updateStatus(item, 'completed')">Complete</button>
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; color:red;" *ngIf="item.status==='pending' || item.status==='processing'" (click)="updateStatus(item, 'failed')">Fail</button>
+            </div>
           </td>
         </tr>
         <tr *ngIf="refunds.length === 0"><td colspan="6" class="text-center py-4">No refunds.</td></tr>

@@ -59,6 +59,11 @@ export const routes: Routes = [
         data: { roles: ['ADMIN', 'STAFF'] }
       },
       {
+        path: 'products-catalog/:id',
+        loadComponent: () => import('./features/shopping/product-detail/product-detail.component').then(m => m.ProductDetailComponent),
+        data: { roles: ['CUSTOMER'] }
+      },
+      {
         path: 'products-catalog',
         loadComponent: () => import('./features/shopping/product-catalog/product-catalog.component').then(m => m.ProductCatalogComponent),
         data: { roles: ['CUSTOMER'] }
@@ -111,14 +116,9 @@ export const routes: Routes = [
       },
       {
         path: 'refunds',
-        loadComponent: () => import('./features/refunds/refund-list/refund-list.component').then(m => m.RefundListComponent),
-        data: { roles: ['ADMIN', 'STAFF'] }
+        redirectTo: 'return-requests',
+        pathMatch: 'full'
       },
-      {
-        path: 'banners',
-        loadComponent: () => import('./features/banners/banner-list/banner-list.component').then(m => m.BannerListComponent),
-        data: { roles: ['ADMIN', 'STAFF'] }
-      }
     ]
   },
   { path: '**', redirectTo: 'login' }
