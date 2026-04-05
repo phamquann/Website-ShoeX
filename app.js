@@ -55,7 +55,6 @@ app.use('/api/v1/reviews', require('./modules/review/reviewRoute'));
 app.use('/api/v1/shipments', require('./modules/shipment/shipmentRoute'));
 app.use('/api/v1/return-requests', require('./modules/returnRequest/returnRequestRoute'));
 app.use('/api/v1/refunds', require('./modules/refund/refundRoute'));
-app.use('/api/v1/banners', require('./modules/banner/bannerRoute'));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

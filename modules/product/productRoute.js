@@ -3,7 +3,7 @@ const router = express.Router();
 const productController = require('./productController');
 const { authenticate, authorize } = require('../../middlewares/auth');
 const { validate, mongoIdRules } = require('../../middlewares/validator');
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const uploadMiddleware = require('../../middlewares/upload');
 const reviewController = require('../review/reviewController');
 
@@ -15,14 +15,40 @@ const productCreateRules = [
   body('category').isMongoId().withMessage('Category must be a valid ID')
 ];
 
+const reviewCreateRules = [
+  body('orderId').notEmpty().withMessage('orderId is required')
+    .isMongoId().withMessage('orderId must be a valid ID'),
+  body('rating').notEmpty().withMessage('rating is required')
+    .isInt({ min: 1, max: 5 }).withMessage('rating must be an integer between 1 and 5'),
+  body('comment').optional({ checkFalsy: true })
+    .isString().withMessage('comment must be a string')
+    .isLength({ max: 1000 }).withMessage('comment must be at most 1000 characters')
+];
+
+const reviewQueryRules = [
+  query('star').optional().isInt({ min: 1, max: 5 }).withMessage('star must be between 1 and 5'),
+  query('hasImages').optional().isIn(['true', 'false']).withMessage('hasImages must be true or false'),
+  query('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('limit must be from 1 to 50')
+];
+
 // ===== PUBLIC ROUTES =====
 router.get('/', productController.getAll);
 router.get('/slug/:slug', productController.getBySlug);
 router.get('/:id', mongoIdRules(), validate, productController.getById);
 
 // ===== REVIEWS =====
-router.get('/:id/reviews', reviewController.getByProduct);
-router.post('/:id/reviews', authenticate, reviewController.createForProduct);
+router.get('/:id/reviews', mongoIdRules(), reviewQueryRules, validate, reviewController.getByProduct);
+router.get('/:id/reviews/summary', mongoIdRules(), validate, reviewController.getSummaryByProduct);
+router.post('/:id/reviews',
+  authenticate,
+  mongoIdRules(),
+  uploadMiddleware.uploadMultipleImages.array('images', 5),
+  uploadMiddleware.handleUploadError,
+  reviewCreateRules,
+  validate,
+  reviewController.createForProduct
+);
 
 // ===== PROTECTED - CRUD =====
 router.post('/', authenticate, authorize('ADMIN', 'STAFF'), productCreateRules, validate, productController.create);

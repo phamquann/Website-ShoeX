@@ -66,6 +66,24 @@ const productSchema = new mongoose.Schema({
   isDeleted: {
     type: Boolean,
     default: false
+  },
+  averageRating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
+  },
+  reviewCount: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  ratingBreakdown: {
+    star1: { type: Number, min: 0, default: 0 },
+    star2: { type: Number, min: 0, default: 0 },
+    star3: { type: Number, min: 0, default: 0 },
+    star4: { type: Number, min: 0, default: 0 },
+    star5: { type: Number, min: 0, default: 0 }
   }
 }, {
   timestamps: true,
@@ -84,4 +102,100 @@ productSchema.virtual('variants', {
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ brand: 1, category: 1, isDeleted: 1 });
 
-module.exports = mongoose.model('product', productSchema);
+const productVariantSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'product',
+    required: [true, 'Product is required']
+  },
+  size: {
+    type: String,
+    required: [true, 'Size is required'],
+    trim: true
+  },
+  color: {
+    name: {
+      type: String,
+      required: [true, 'Color name is required'],
+      trim: true
+    },
+    hexCode: {
+      type: String,
+      default: '#000000',
+      trim: true
+    }
+  },
+  sku: {
+    type: String,
+    required: [true, 'Variant SKU is required'],
+    unique: true,
+    uppercase: true,
+    trim: true
+  },
+  price: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  stock: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  reserved: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  soldCount: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+productVariantSchema.virtual('available').get(function () {
+  return this.stock - this.reserved;
+});
+
+productVariantSchema.index({ product: 1, size: 1, 'color.name': 1 }, { unique: true });
+
+const inventorySchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Types.ObjectId,
+    ref: 'product',
+    required: true,
+    unique: true
+  },
+  stock: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  reserved: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  soldCount: {
+    type: Number,
+    min: 0,
+    default: 0
+  }
+});
+
+const productModel = mongoose.models.product || mongoose.model('product', productSchema);
+const productVariantModel = mongoose.models.productVariant || mongoose.model('productVariant', productVariantSchema);
+const inventoryModel = mongoose.models.inventory || mongoose.model('inventory', inventorySchema);
+
+module.exports = productModel;
+module.exports.ProductVariant = productVariantModel;
+module.exports.Inventory = inventoryModel;

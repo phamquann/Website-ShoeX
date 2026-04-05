@@ -1,6 +1,37 @@
 const mongoose = require("mongoose");
 let bcrypt = require('bcrypt');
 
+const userRefreshTokenSchema = new mongoose.Schema(
+  {
+    token: { type: String, required: true, trim: true },
+    expiresAt: { type: Date, required: true },
+    isRevoked: { type: Boolean, default: false },
+    userAgent: { type: String, default: '' },
+    ipAddress: { type: String, default: '' }
+  },
+  {
+    _id: true,
+    timestamps: true
+  }
+);
+
+const userAddressSchema = new mongoose.Schema(
+  {
+    fullName: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    province: { type: String, required: true, trim: true },
+    district: { type: String, required: true, trim: true },
+    ward: { type: String, required: true, trim: true },
+    addressDetail: { type: String, required: true, trim: true },
+    isDefault: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false }
+  },
+  {
+    _id: true,
+    timestamps: true
+  }
+);
+
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -71,6 +102,18 @@ const userSchema = new mongoose.Schema(
     forgotPasswordTokenExp: {
       type: Date,
       default: null
+    },
+    refreshTokens: {
+      type: [userRefreshTokenSchema],
+      default: []
+    },
+    addresses: {
+      type: [userAddressSchema],
+      default: []
+    },
+    wishlist: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'product' }],
+      default: []
     }
   },
   {

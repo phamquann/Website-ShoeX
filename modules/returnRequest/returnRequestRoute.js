@@ -5,6 +5,7 @@ const { authenticate, authorize } = require('../../middlewares/auth');
 
 router.post('/', authenticate, returnRequestController.create);
 router.get('/', authenticate, returnRequestController.getAll);
+router.get('/order/:orderId', authenticate, returnRequestController.getByOrder);
 router.put('/:id/status', authenticate, authorize('ADMIN', 'STAFF'), returnRequestController.updateStatus);
 
 module.exports = router;

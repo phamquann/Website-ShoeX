@@ -1,10 +1,65 @@
 const orderModel = require('../../schemas/orders');
-const paymentModel = require('../../schemas/payments');
-const transactionModel = require('../../schemas/transactions');
-const variantModel = require('../../schemas/productVariants');
-const reservationModel = require('../../schemas/reservations');
+const paymentModel = orderModel.Payment;
+const transactionModel = orderModel.Transaction;
+const shipmentModel = orderModel.Shipment;
+const returnRequestModel = orderModel.ReturnRequest;
+const refundModel = orderModel.Refund;
+const reservationModel = orderModel.Reservation;
+const productModel = require('../../schemas/products');
+const variantModel = productModel.ProductVariant;
 const response = require('../../middlewares/response');
 const { logAction } = require('../../middlewares/auth');
+
+const buildVirtualShipment = (order) => {
+  let status = 'preparing';
+  if (order.status === 'shipping') status = 'delivering';
+  if (order.status === 'delivered' || order.status === 'completed') status = 'delivered';
+  if (order.status === 'cancelled') status = 'failed';
+
+  return {
+    _id: `virtual-${order._id}`,
+    order: order._id,
+    shippingProvider: '',
+    trackingNumber: '',
+    status,
+    estimatedDeliveryDate: null,
+    hasShipment: false,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt
+  };
+};
+
+const FULFILLED_STATUSES = ['delivered', 'completed'];
+
+const buildMonthSeries = (monthlyRows, monthCount) => {
+  const seriesMap = new Map();
+  monthlyRows.forEach((row) => {
+    const key = `${row.year}-${String(row.month).padStart(2, '0')}`;
+    seriesMap.set(key, row);
+  });
+
+  const now = new Date();
+  const result = [];
+  for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
+    const pointDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const year = pointDate.getFullYear();
+    const month = pointDate.getMonth() + 1;
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const matched = seriesMap.get(key);
+
+    result.push({
+      key,
+      label: `${String(month).padStart(2, '0')}/${year}`,
+      year,
+      month,
+      revenue: matched ? matched.revenue : 0,
+      orders: matched ? matched.orders : 0,
+      itemsSold: matched ? matched.itemsSold : 0
+    });
+  }
+
+  return result;
+};
 
 /**
  * GET /api/v1/orders/me
@@ -53,9 +108,20 @@ const getOrderById = async (req, res) => {
     }
 
     // Lấy transactions
-    const transactions = await transactionModel.find({ order: order._id }).sort({ createdAt: -1 });
+    const [transactions, shipment, returnRequest, refund] = await Promise.all([
+      transactionModel.find({ order: order._id }).sort({ createdAt: -1 }),
+      shipmentModel.findOne({ order: order._id }),
+      returnRequestModel.findOne({ order: order._id }).populate('reviewedBy', 'username fullName email'),
+      refundModel.findOne({ order: order._id })
+    ]);
 
-    return response.success(res, { order, transactions });
+    return response.success(res, {
+      order,
+      transactions,
+      shipment: shipment || buildVirtualShipment(order),
+      returnRequest,
+      refund
+    });
   } catch (error) {
     return response.serverError(res, 'Failed to get order', error);
   }
@@ -75,7 +141,7 @@ const getAllOrders = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [orders, total] = await Promise.all([
       orderModel.find(filter)
-        .populate('user', 'username fullName email')
+        .populate('user', 'username fullName email phone')
         .populate('payment', 'method status amount')
         .sort({ createdAt: -1 })
         .skip(skip).limit(parseInt(limit)),
@@ -113,10 +179,11 @@ const updateStatus = async (req, res) => {
       confirmed: ['shipping', 'cancelled'],
       shipping: ['delivered', 'cancelled'],
       delivered: [],
+      completed: [],
       cancelled: []
     };
 
-    if (!transitions[order.status].includes(status)) {
+    if (!transitions[order.status] || !transitions[order.status].includes(status)) {
       return response.badRequest(res, `Cannot change status from '${order.status}' to '${status}'`);
     }
 
@@ -124,6 +191,9 @@ const updateStatus = async (req, res) => {
 
     if (status === 'cancelled') {
       order.cancelledAt = new Date();
+      order.completedAt = null;
+      order.isReceivedConfirmed = false;
+      order.receivedConfirmedAt = null;
       order.cancelReason = cancelReason || '';
 
       // Release inventory
@@ -165,6 +235,10 @@ const updateStatus = async (req, res) => {
     }
 
     if (status === 'delivered') {
+      order.completedAt = null;
+      order.isReceivedConfirmed = false;
+      order.receivedConfirmedAt = null;
+
       // COD: mark as paid on delivery
       const payment = await paymentModel.findOne({ order: order._id });
       if (payment && payment.method === 'cod' && payment.status !== 'paid') {
@@ -198,4 +272,187 @@ const updateStatus = async (req, res) => {
   }
 };
 
-module.exports = { getMyOrders, getOrderById, getAllOrders, updateStatus };
+/**
+ * PATCH /api/v1/orders/:id/complete
+ * USER - Xac nhan da nhan hang (hoan thanh don)
+ */
+const completeMyOrder = async (req, res) => {
+  try {
+    const order = await orderModel.findById(req.params.id);
+    if (!order) return response.notFound(res, 'Order not found');
+
+    if (order.user.toString() !== req.user._id.toString()) {
+      return response.forbidden(res, 'You can only complete your own orders');
+    }
+
+    if (order.status !== 'delivered' && order.status !== 'completed') {
+      return response.badRequest(res, 'Only delivered orders can be confirmed as received');
+    }
+
+    if (order.status === 'completed' && order.isReceivedConfirmed) {
+      return response.success(res, order, 'Order has already been confirmed as received');
+    }
+
+    order.status = 'completed';
+    order.completedAt = order.completedAt || new Date();
+    order.isReceivedConfirmed = true;
+    order.receivedConfirmedAt = new Date();
+    await order.save();
+
+    await logAction(req, 'COMPLETE', 'order', order._id, `User confirmed received order ${order.orderCode}`);
+    return response.success(res, order, 'Order received confirmation saved successfully');
+  } catch (error) {
+    return response.serverError(res, 'Failed to confirm order receipt', error);
+  }
+};
+
+/**
+ * GET /api/v1/orders/dashboard/overview
+ * ADMIN/STAFF - Thong ke dashboard ban hang
+ */
+const getDashboardOverview = async (req, res) => {
+  try {
+    const queryMonths = Number.parseInt(req.query.months, 10);
+    const months = Number.isInteger(queryMonths)
+      ? Math.min(Math.max(queryMonths, 3), 24)
+      : 6;
+
+    const startDate = new Date();
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setMonth(startDate.getMonth() - (months - 1));
+
+    const [summaryFacet, topProducts, monthlyRows] = await Promise.all([
+      orderModel.aggregate([
+        {
+          $facet: {
+            revenueSummary: [
+              { $match: { status: { $in: FULFILLED_STATUSES } } },
+              {
+                $group: {
+                  _id: null,
+                  totalRevenue: { $sum: '$totalAmount' },
+                  fulfilledOrders: { $sum: 1 }
+                }
+              }
+            ],
+            itemSummary: [
+              { $match: { status: { $in: FULFILLED_STATUSES } } },
+              {
+                $addFields: {
+                  orderItemsSold: { $sum: '$items.quantity' }
+                }
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalItemsSold: { $sum: '$orderItemsSold' }
+                }
+              }
+            ],
+            statusBreakdown: [
+              {
+                $group: {
+                  _id: '$status',
+                  count: { $sum: 1 }
+                }
+              },
+              { $project: { _id: 0, status: '$_id', count: 1 } },
+              { $sort: { count: -1 } }
+            ]
+          }
+        }
+      ]),
+      orderModel.aggregate([
+        { $match: { status: { $in: FULFILLED_STATUSES } } },
+        { $unwind: '$items' },
+        {
+          $group: {
+            _id: '$items.product',
+            productName: { $first: '$items.productName' },
+            thumbnail: { $first: '$items.thumbnail' },
+            quantitySold: { $sum: '$items.quantity' },
+            revenue: { $sum: '$items.subtotal' }
+          }
+        },
+        { $sort: { quantitySold: -1, revenue: -1 } },
+        { $limit: 5 },
+        {
+          $project: {
+            _id: 0,
+            productId: '$_id',
+            productName: 1,
+            thumbnail: 1,
+            quantitySold: 1,
+            revenue: 1
+          }
+        }
+      ]),
+      orderModel.aggregate([
+        {
+          $match: {
+            status: { $in: FULFILLED_STATUSES },
+            createdAt: { $gte: startDate }
+          }
+        },
+        {
+          $addFields: {
+            orderItemsSold: { $sum: '$items.quantity' }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' }
+            },
+            revenue: { $sum: '$totalAmount' },
+            orders: { $sum: 1 },
+            itemsSold: { $sum: '$orderItemsSold' }
+          }
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+        {
+          $project: {
+            _id: 0,
+            year: '$_id.year',
+            month: '$_id.month',
+            revenue: 1,
+            orders: 1,
+            itemsSold: 1
+          }
+        }
+      ])
+    ]);
+
+    const summaryData = summaryFacet?.[0] || {};
+    const revenueSummary = summaryData.revenueSummary?.[0] || {};
+    const itemSummary = summaryData.itemSummary?.[0] || {};
+    const statusBreakdown = summaryData.statusBreakdown || [];
+
+    const totalRevenue = Number(revenueSummary.totalRevenue || 0);
+    const fulfilledOrders = Number(revenueSummary.fulfilledOrders || 0);
+    const totalItemsSold = Number(itemSummary.totalItemsSold || 0);
+    const averageOrderValue = fulfilledOrders > 0
+      ? Number((totalRevenue / fulfilledOrders).toFixed(2))
+      : 0;
+
+    const monthlyRevenue = buildMonthSeries(monthlyRows, months);
+
+    return response.success(res, {
+      summary: {
+        totalRevenue,
+        totalItemsSold,
+        fulfilledOrders,
+        averageOrderValue
+      },
+      monthlyRevenue,
+      topProducts,
+      statusBreakdown
+    }, 'Dashboard overview retrieved');
+  } catch (error) {
+    return response.serverError(res, 'Failed to get dashboard overview', error);
+  }
+};
+
+module.exports = { getMyOrders, getOrderById, getAllOrders, updateStatus, completeMyOrder, getDashboardOverview };

@@ -29,7 +29,7 @@ const uploadFileSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["avatar", "product", "banner", "other"],
+      enum: ["avatar", "product", "other"],
       default: "other"
     },
     uploadedBy: {
